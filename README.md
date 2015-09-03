@@ -1,6 +1,9 @@
 # Jsonnet
 
-Jsonnet processor library
+Jsonnet processor library.  Wraps the official C++ implementation with a Ruby extention library.
+
+## Status
+Pre-alpha.  Under development.
 
 ## Installation
 
