@@ -20,6 +20,36 @@ static const rb_data_type_t jsonnet_vm_type = {
     /* flags = */ RUBY_TYPED_FREE_IMMEDIATELY
 };
 
+/**
+ * raises an EvaluationError whose message is \c msg.
+ * @param[in] vm  a JsonnetVM
+ * @param[in] msg must be a NUL-terminated string returned by \c vm.
+ * @return never returns
+ * @throw EvaluationError
+ */
+static void
+raise_eval_error(struct JsonnetVm *vm, char *msg) {
+    VALUE ex = rb_exc_new_cstr(eEvaluationError, msg);
+    jsonnet_realloc(vm, msg, 0);
+    rb_exc_raise(ex);
+}
+
+/**
+ * Returns a String whose contents is equal to \c json.
+ * It automatically frees \c json just after constructing the return value.
+ *
+ * @param[in] vm   a JsonnetVM
+ * @param[in] json must be a NUL-terminated string returned by \c vm.
+ * @return Ruby string equal to \c json.
+ */
+static VALUE
+str_new_json(struct JsonnetVm *vm, char *json) {
+    VALUE str = rb_utf8_str_new_cstr(json);
+    jsonnet_realloc(vm, json, 0);
+    return str;
+}
+
+
 /*
  * call-seq:
  *  Jsonnet.version -> String
@@ -44,6 +74,7 @@ vm_free(void *ptr) {
 
 static VALUE
 vm_evaluate_file(VALUE self, VALUE fname) {
+    VALUE json;
     struct JsonnetVm *vm;
     int error;
     char* result;
@@ -52,9 +83,9 @@ vm_evaluate_file(VALUE self, VALUE fname) {
     FilePathValue(fname);
     result = jsonnet_evaluate_file(vm, StringValueCStr(fname), &error);
     if (error) {
-        rb_raise(eEvaluationError, "%s", result);
+        raise_eval_error(vm, result);
     }
-    return rb_utf8_str_new_cstr(result);
+    return str_new_json(vm, result);
 }
 
 static VALUE
@@ -62,7 +93,7 @@ vm_evaluate(int argc, VALUE *argv, VALUE self) {
     struct JsonnetVm *vm;
     int error;
     char* result;
-    VALUE snippet, fname = Qnil;
+    VALUE json, snippet, fname = Qnil;
 
     rb_scan_args(argc, argv, "11", &snippet, &fname);
 
@@ -73,9 +104,9 @@ vm_evaluate(int argc, VALUE *argv, VALUE self) {
             StringValueCStr(snippet),
             &error);
     if (error) {
-        rb_raise(eEvaluationError, "%s", result);
+        raise_eval_error(vm, result);
     }
-    return rb_utf8_str_new_cstr(result);
+    return str_new_json(vm, result);
 }
 
 void
