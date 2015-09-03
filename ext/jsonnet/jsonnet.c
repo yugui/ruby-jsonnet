@@ -5,6 +5,7 @@
  * Jsonnet evaluator
  */
 static VALUE cVM;
+static VALUE eEvaluationError;
 
 static void vm_free(void *ptr);
 static const rb_data_type_t jsonnet_vm_type = {
@@ -41,6 +42,21 @@ vm_free(void *ptr) {
     jsonnet_destroy((struct JsonnetVm*)ptr);
 }
 
+static VALUE
+vm_evaluate_file(VALUE self, VALUE fname) {
+    struct JsonnetVm *vm;
+    int error;
+    char* result;
+
+    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
+    FilePathValue(fname);
+    result = jsonnet_evaluate_file(vm, StringValueCStr(fname), &error);
+    if (error) {
+        rb_raise(eEvaluationError, "%s", result);
+    }
+    return rb_utf8_str_new_cstr(result);
+}
+
 void
 Init_jsonnet_wrap(void) {
     VALUE mJsonnet = rb_define_module("Jsonnet");
@@ -48,4 +64,7 @@ Init_jsonnet_wrap(void) {
 
     cVM = rb_define_class_under(mJsonnet, "VM", rb_cData);
     rb_define_singleton_method(cVM, "new", vm_s_new, 0);
+    rb_define_method(cVM, "evaluate_file", vm_evaluate_file, 1);
+
+    eEvaluationError = rb_define_class_under(mJsonnet, "EvaluationError", rb_eRuntimeError);
 }
