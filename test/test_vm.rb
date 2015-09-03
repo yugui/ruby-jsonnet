@@ -34,6 +34,20 @@ class TestVM < Test::Unit::TestCase
     EOS
   end
 
+  test 'Jsonnet::VM#evaluate can be called without filename' do
+    vm = Jsonnet::VM.new
+    result = vm.evaluate(<<-EOS)
+      local myvar = 1;
+      {
+          ["foo" + myvar]: myvar,
+      }
+    EOS
+
+    assert_equal JSON.parse(<<-EOS), JSON.parse(result)
+      {"foo1": 1}
+    EOS
+  end
+
   test 'Jsonnet::VM#evaluate raises an EvaluationError on error' do
     vm = Jsonnet::VM.new
     assert_raise(Jsonnet::EvaluationError) do
