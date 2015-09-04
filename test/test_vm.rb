@@ -22,7 +22,7 @@ class TestVM < Test::Unit::TestCase
 
   test 'Jsonnet::VM#evaluate evaluates snippet' do
     vm = Jsonnet::VM.new
-    result = vm.evaluate(<<-EOS, 'example.snippet')
+    result = vm.evaluate(<<-EOS, filename: 'example.snippet')
       local myvar = 1;
       {
           ["foo" + myvar]: myvar,
@@ -51,7 +51,7 @@ class TestVM < Test::Unit::TestCase
   test 'Jsonnet::VM#evaluate raises an EvaluationError on error' do
     vm = Jsonnet::VM.new
     assert_raise(Jsonnet::EvaluationError) do
-      vm.evaluate(<<-EOS, 'example.snippet')
+      vm.evaluate(<<-EOS, filename: 'example.snippet')
         {
             // unbound variable
             ["foo" + myvar]: myvar,
@@ -60,7 +60,7 @@ class TestVM < Test::Unit::TestCase
     end
   end
 
-  test 'Jsonnet::VM#evaluate_multi returns a JSON per filename' do
+  test 'Jsonnet::VM#evaluate returns a JSON per filename on multi mode' do
     vm = Jsonnet::VM.new
     [
       [ "{}", {} ],
@@ -89,7 +89,7 @@ class TestVM < Test::Unit::TestCase
         }
       ],
     ].each do |jsonnet, expected|
-      result = vm.evaluate_multi(jsonnet)
+      result = vm.evaluate(jsonnet, multi: true)
       assert_equal expected.keys.sort, result.keys.sort
       expected.each do |fname, value|
         assert_not_nil result[fname]
@@ -98,9 +98,9 @@ class TestVM < Test::Unit::TestCase
     end
   end
 
-  test 'Jsonnet::VM#evaluate_file_multi returns a JSON per filename' do
+  test 'Jsonnet::VM#evaluate_file returns a JSON per filename on multi mode' do
     vm = Jsonnet::VM.new
-    result = vm.evaluate_file_multi example_file("example_multi.jsonnet")
+    result = vm.evaluate_file(example_file("example_multi.jsonnet"), multi: true)
     expected = {
       'foo1' => [1],
       'bar1' => {'baz2' => 2},

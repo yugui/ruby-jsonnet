@@ -94,75 +94,48 @@ vm_free(void *ptr) {
 }
 
 static VALUE
-vm_evaluate_file(VALUE self, VALUE fname) {
+vm_evaluate_file(VALUE self, VALUE fname, VALUE multi_p) {
     struct JsonnetVm *vm;
     int error;
     char* result;
 
     TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
     FilePathValue(fname);
-    result = jsonnet_evaluate_file(vm, StringValueCStr(fname), &error);
+    if (RTEST(multi_p)) {
+        result = jsonnet_evaluate_file_multi(vm, StringValueCStr(fname), &error);
+    }
+    else {
+        result = jsonnet_evaluate_file(vm, StringValueCStr(fname), &error);
+    }
     if (error) {
         raise_eval_error(vm, result);
     }
-    return str_new_json(vm, result);
+    return RTEST(multi_p) ? fileset_new(vm, result) : str_new_json(vm, result);
 }
 
 static VALUE
-vm_evaluate_file_multi(VALUE self, VALUE fname) {
+vm_evaluate(VALUE self, VALUE snippet, VALUE fname, VALUE multi_p) {
     struct JsonnetVm *vm;
     int error;
     char* result;
 
     TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
     FilePathValue(fname);
-    result = jsonnet_evaluate_file_multi(vm, StringValueCStr(fname), &error);
+    if (RTEST(multi_p)) {
+        result = jsonnet_evaluate_snippet_multi(
+                vm,
+                StringValueCStr(fname), StringValueCStr(snippet), &error);
+    }
+    else {
+        result = jsonnet_evaluate_snippet(
+                vm,
+                StringValueCStr(fname), StringValueCStr(snippet), &error);
+    }
+
     if (error) {
         raise_eval_error(vm, result);
     }
-    return fileset_new(vm, result);
-}
-
-static VALUE
-vm_evaluate(int argc, VALUE *argv, VALUE self) {
-    struct JsonnetVm *vm;
-    int error;
-    char* result;
-    VALUE snippet, fname = Qnil;
-
-    rb_scan_args(argc, argv, "11", &snippet, &fname);
-
-    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
-    result = jsonnet_evaluate_snippet(
-            vm,
-            fname == Qnil ? "(jsonnet)" : (FilePathValue(fname), StringValueCStr(fname)),
-            StringValueCStr(snippet),
-            &error);
-    if (error) {
-        raise_eval_error(vm, result);
-    }
-    return str_new_json(vm, result);
-}
-
-static VALUE
-vm_evaluate_multi(int argc, VALUE *argv, VALUE self) {
-    struct JsonnetVm *vm;
-    VALUE snippet, fname = Qnil;
-    char *result;
-    int error;
-
-    rb_scan_args(argc, argv, "11", &snippet, &fname);
-    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
-
-    result = jsonnet_evaluate_snippet_multi(
-            vm,
-            fname == Qnil ? "(jsonnet)" : (FilePathValue(fname), StringValueCStr(fname)),
-            StringValueCStr(snippet),
-            &error);
-    if (error) {
-        raise_eval_error(vm, result);
-    }
-    return fileset_new(vm, result);
+    return RTEST(multi_p) ? fileset_new(vm, result) : str_new_json(vm, result);
 }
 
 void
@@ -172,10 +145,8 @@ Init_jsonnet_wrap(void) {
 
     cVM = rb_define_class_under(mJsonnet, "VM", rb_cData);
     rb_define_singleton_method(cVM, "new", vm_s_new, 0);
-    rb_define_method(cVM, "evaluate_file", vm_evaluate_file, 1);
-    rb_define_method(cVM, "evaluate_file_multi", vm_evaluate_file_multi, 1);
-    rb_define_method(cVM, "evaluate", vm_evaluate, -1);
-    rb_define_method(cVM, "evaluate_multi", vm_evaluate_multi, -1);
+    rb_define_private_method(cVM, "eval_file", vm_evaluate_file, 2);
+    rb_define_private_method(cVM, "eval_snippet", vm_evaluate, 3);
 
     eEvaluationError = rb_define_class_under(mJsonnet, "EvaluationError", rb_eRuntimeError);
 }
