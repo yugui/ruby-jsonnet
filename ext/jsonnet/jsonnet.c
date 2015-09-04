@@ -30,7 +30,8 @@ static const rb_data_type_t jsonnet_vm_type = {
  * @throw EvaluationError
  */
 static void
-raise_eval_error(struct JsonnetVm *vm, char *msg) {
+raise_eval_error(struct JsonnetVm *vm, char *msg)
+{
     VALUE ex = rb_exc_new_cstr(eEvaluationError, msg);
     jsonnet_realloc(vm, msg, 0);
     rb_exc_raise(ex);
@@ -45,14 +46,16 @@ raise_eval_error(struct JsonnetVm *vm, char *msg) {
  * @return Ruby string equal to \c json.
  */
 static VALUE
-str_new_json(struct JsonnetVm *vm, char *json) {
+str_new_json(struct JsonnetVm *vm, char *json)
+{
     VALUE str = rb_utf8_str_new_cstr(json);
     jsonnet_realloc(vm, json, 0);
     return str;
 }
 
 static VALUE
-fileset_new(struct JsonnetVm *vm, char *buf) {
+fileset_new(struct JsonnetVm *vm, char *buf)
+{
     VALUE fileset = rb_hash_new();
     char *ptr, *json;
     for (ptr = buf; *ptr; ptr = json + strlen(json)+1) {
@@ -78,7 +81,8 @@ fileset_new(struct JsonnetVm *vm, char *buf) {
  * Returns the version of the underlying C++ implementation of Jsonnet.
  */
 static VALUE
-jw_s_version(VALUE mod) {
+jw_s_version(VALUE mod)
+{
     return rb_usascii_str_new_cstr(jsonnet_version());
 }
 
@@ -94,10 +98,11 @@ vm_free(void *ptr) {
 }
 
 static VALUE
-vm_evaluate_file(VALUE self, VALUE fname, VALUE multi_p) {
+vm_evaluate_file(VALUE self, VALUE fname, VALUE multi_p)
+{
     struct JsonnetVm *vm;
     int error;
-    char* result;
+    char *result;
 
     TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
     FilePathValue(fname);
@@ -107,6 +112,7 @@ vm_evaluate_file(VALUE self, VALUE fname, VALUE multi_p) {
     else {
         result = jsonnet_evaluate_file(vm, StringValueCStr(fname), &error);
     }
+
     if (error) {
         raise_eval_error(vm, result);
     }
@@ -114,10 +120,11 @@ vm_evaluate_file(VALUE self, VALUE fname, VALUE multi_p) {
 }
 
 static VALUE
-vm_evaluate(VALUE self, VALUE snippet, VALUE fname, VALUE multi_p) {
+vm_evaluate(VALUE self, VALUE snippet, VALUE fname, VALUE multi_p)
+{
     struct JsonnetVm *vm;
     int error;
-    char* result;
+    char *result;
 
     TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
     FilePathValue(fname);
@@ -139,7 +146,8 @@ vm_evaluate(VALUE self, VALUE snippet, VALUE fname, VALUE multi_p) {
 }
 
 void
-Init_jsonnet_wrap(void) {
+Init_jsonnet_wrap(void)
+{
     VALUE mJsonnet = rb_define_module("Jsonnet");
     rb_define_singleton_method(mJsonnet, "libversion", jw_s_version, 0);
 
