@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 require 'jsonnet'
 
 require 'json'
@@ -33,6 +34,26 @@ class TestVM < Test::Unit::TestCase
       end
     }
   end
+
+  test "Jsonnet::VM#evaluate_file returns the same encoding as source" do
+    vm = Jsonnet::VM.new
+    with_example_file(%Q{ ["テスト"] }.encode(Encoding::EUC_JP)) {|fname|
+      result = vm.evaluate_file(fname, encoding: Encoding::EUC_JP)
+      assert_equal Encoding::EUC_JP, result.encoding
+    }
+  end
+
+  test "Jsonnet::VM#evaluate_file raises an error in the encoding of filename" do
+    vm = Jsonnet::VM.new
+    begin
+      with_example_file(%q{ ["unterminated string }) {|fname|
+        vm.evaluate_file(fname.encode(Encoding::SJIS)) 
+      }
+    rescue Jsonnet::EvaluationError => e
+      assert_equal Encoding::SJIS, e.message.encoding
+    end
+  end
+
 
   test 'Jsonnet::VM#evaluate evaluates snippet' do
     vm = Jsonnet::VM.new
@@ -71,6 +92,21 @@ class TestVM < Test::Unit::TestCase
             ["foo" + myvar]: myvar,
         }
       EOS
+    end
+  end
+
+  test "Jsonnet::VM#evaluate returns the same encoding as source" do
+    vm = Jsonnet::VM.new
+    result = vm.evaluate(%Q{ ["テスト"] }.encode(Encoding::EUC_JP))
+    assert_equal Encoding::EUC_JP, result.encoding
+  end
+
+  test "Jsonnet::VM#evaluate raises an error in the encoding of filename" do
+    vm = Jsonnet::VM.new
+    begin
+      vm.evaluate(%Q{ ["unterminated string }, filename: "テスト.json".encode(Encoding::SJIS)) 
+    rescue Jsonnet::EvaluationError => e
+      assert_equal Encoding::SJIS, e.message.encoding
     end
   end
 

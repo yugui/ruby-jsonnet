@@ -1,6 +1,7 @@
 #include <string.h>
 #include <ruby/ruby.h>
 #include <ruby/intern.h>
+#include <ruby/encoding.h>
 #include <libjsonnet.h>
 
 /*
@@ -8,6 +9,11 @@
  */
 static VALUE cVM;
 static VALUE eEvaluationError;
+/**
+ * Indicates that the encoding of the given string is not allowed by
+ * the C++ implementation of Jsonnet.
+ */
+static VALUE eUnsupportedEncodingError;
 
 static void vm_free(void *ptr);
 
@@ -31,9 +37,9 @@ static const rb_data_type_t jsonnet_vm_type = {
  * @throw EvaluationError
  */
 static void
-raise_eval_error(struct JsonnetVm *vm, char *msg)
+raise_eval_error(struct JsonnetVm *vm, char *msg, rb_encoding *enc)
 {
-    VALUE ex = rb_exc_new_cstr(eEvaluationError, msg);
+    VALUE ex = rb_exc_new3(eEvaluationError, rb_enc_str_new_cstr(msg, enc));
     jsonnet_realloc(vm, msg, 0);
     rb_exc_raise(ex);
 }
@@ -47,9 +53,9 @@ raise_eval_error(struct JsonnetVm *vm, char *msg)
  * @return Ruby string equal to \c json.
  */
 static VALUE
-str_new_json(struct JsonnetVm *vm, char *json)
+str_new_json(struct JsonnetVm *vm, char *json, rb_encoding *enc)
 {
-    VALUE str = rb_utf8_str_new_cstr(json);
+    VALUE str = rb_enc_str_new_cstr(json, enc);
     jsonnet_realloc(vm, json, 0);
     return str;
 }
@@ -64,7 +70,7 @@ str_new_json(struct JsonnetVm *vm, char *json)
  * @return Hash
  */
 static VALUE
-fileset_new(struct JsonnetVm *vm, char *buf)
+fileset_new(struct JsonnetVm *vm, char *buf, rb_encoding *enc)
 {
     VALUE fileset = rb_hash_new();
     char *ptr, *json;
@@ -73,12 +79,12 @@ fileset_new(struct JsonnetVm *vm, char *buf)
         if (!*json) {
             VALUE ex = rb_exc_new3(
                     eEvaluationError,
-                    rb_sprintf("output file %s without body", ptr));
+                    rb_enc_sprintf(enc, "output file %s without body", ptr));
             jsonnet_realloc(vm, buf, 0);
             rb_exc_raise(ex);
         }
 
-        rb_hash_aset(fileset, rb_utf8_str_new_cstr(ptr), rb_utf8_str_new_cstr(json));
+        rb_hash_aset(fileset, rb_enc_str_new_cstr(ptr, enc), rb_enc_str_new_cstr(json, enc));
     }
     jsonnet_realloc(vm, buf, 0);
     return fileset;
@@ -108,11 +114,12 @@ vm_free(void *ptr) {
 }
 
 static VALUE
-vm_evaluate_file(VALUE self, VALUE fname, VALUE multi_p)
+vm_evaluate_file(VALUE self, VALUE fname, VALUE encoding, VALUE multi_p)
 {
     struct JsonnetVm *vm;
     int error;
     char *result;
+    rb_encoding *const enc = rb_to_encoding(encoding);
 
     TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
     FilePathValue(fname);
@@ -124,9 +131,9 @@ vm_evaluate_file(VALUE self, VALUE fname, VALUE multi_p)
     }
 
     if (error) {
-        raise_eval_error(vm, result);
+        raise_eval_error(vm, result, rb_enc_get(fname));
     }
-    return RTEST(multi_p) ? fileset_new(vm, result) : str_new_json(vm, result);
+    return RTEST(multi_p) ? fileset_new(vm, result, enc) : str_new_json(vm, result, enc);
 }
 
 static VALUE
@@ -135,6 +142,14 @@ vm_evaluate(VALUE self, VALUE snippet, VALUE fname, VALUE multi_p)
     struct JsonnetVm *vm;
     int error;
     char *result;
+
+    rb_encoding *enc = rb_enc_get(StringValue(snippet));
+    if (!rb_enc_asciicompat(enc)) {
+        rb_raise(
+            eUnsupportedEncodingError,
+            "jsonnet source encoding must be ASCII-compatible but got %s",
+            rb_enc_name(enc));
+    }
 
     TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
     FilePathValue(fname);
@@ -150,9 +165,9 @@ vm_evaluate(VALUE self, VALUE snippet, VALUE fname, VALUE multi_p)
     }
 
     if (error) {
-        raise_eval_error(vm, result);
+        raise_eval_error(vm, result, rb_enc_get(fname));
     }
-    return RTEST(multi_p) ? fileset_new(vm, result) : str_new_json(vm, result);
+    return RTEST(multi_p) ? fileset_new(vm, result, enc) : str_new_json(vm, result, enc);
 }
 
 void
@@ -163,8 +178,10 @@ Init_jsonnet_wrap(void)
 
     cVM = rb_define_class_under(mJsonnet, "VM", rb_cData);
     rb_define_singleton_method(cVM, "new", vm_s_new, 0);
-    rb_define_private_method(cVM, "eval_file", vm_evaluate_file, 2);
+    rb_define_private_method(cVM, "eval_file", vm_evaluate_file, 3);
     rb_define_private_method(cVM, "eval_snippet", vm_evaluate, 3);
 
     eEvaluationError = rb_define_class_under(mJsonnet, "EvaluationError", rb_eRuntimeError);
+    eUnsupportedEncodingError =
+        rb_define_class_under(mJsonnet, "UnsupportedEncodingError", rb_eEncodingError);
 }
