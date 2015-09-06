@@ -223,6 +223,44 @@ class TestVM < Test::Unit::TestCase
     assert_equal ["foo"], JSON.parse(vm.evaluate(%q[ ["foo"] ]))
   end
 
+  test "Jsonnet::VM#import_callback customizes import file resolution" do
+    vm = Jsonnet::VM.new
+    vm.import_callback = ->(base, rel) {
+      case [base, rel]
+      when ['/path/to/base/', 'imported1.jsonnet']
+        return <<-EOS, '/path/to/imported1/imported1.jsonnet'
+          import "imported2.jsonnet" {
+            b: 2,
+          }
+        EOS
+      when ['/path/to/imported1/', "imported2.jsonnet"]
+        return <<-EOS, '/path/to/imported2/imported2.jsonnet'
+          { a: 1 }
+        EOS
+      else
+        raise Errno::ENOENT, "#{rel} at #{base}"
+      end
+    }
+    result = vm.evaluate(<<-EOS, filename: "/path/to/base/example.jsonnet")
+      import "imported1.jsonnet" { c: 3 }
+    EOS
+
+    expected = {"a" => 1, "b" => 2, "c" => 3}
+    assert_equal expected, JSON.parse(result)
+  end
+
+  test "Jsonnet::VM#evaluate returns an error if customized import callback raises an exception" do
+    vm = Jsonnet::VM.new
+    called = false
+    vm.import_callback = ->(base, rel) { called = true; raise }
+    assert_raise(Jsonnet::EvaluationError) {
+      vm.evaluate(<<-EOS)
+        import "a.jsonnet" {}
+      EOS
+    }
+    assert_true called
+  end
+
   private
   def with_example_file(content)
     Tempfile.open("example.jsonnet") {|f|

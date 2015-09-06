@@ -4,6 +4,9 @@
 #include <ruby/encoding.h>
 #include <libjsonnet.h>
 
+static ID id_call;
+static ID id_message;
+
 /*
  * Jsonnet evaluator
  */
@@ -14,6 +17,11 @@ static VALUE eEvaluationError;
  * the C++ implementation of Jsonnet.
  */
 static VALUE eUnsupportedEncodingError;
+
+struct jsonnet_vm_wrap {
+    struct JsonnetVm *vm;
+    VALUE callback;
+};
 
 static void vm_free(void *ptr);
 
@@ -90,6 +98,18 @@ fileset_new(struct JsonnetVm *vm, char *buf, rb_encoding *enc)
     return fileset;
 }
 
+/**
+ * Allocates a C string whose content is equal to \c str with jsonnet_realloc.
+ */
+static char *
+str_jsonnet_cstr(struct JsonnetVm *vm, VALUE str)
+{
+    const char *const cstr = StringValueCStr(str);
+    char *const buf = jsonnet_realloc(vm, NULL, strlen(cstr));
+    strcpy(buf, cstr);
+    return buf;
+}
+
 static rb_encoding *
 enc_assert_asciicompat(VALUE str) {
     rb_encoding *enc = rb_enc_get(str);
@@ -116,63 +136,135 @@ jw_s_version(VALUE mod)
 
 static VALUE
 vm_s_new(VALUE mod) {
-    struct JsonnetVm *const vm = jsonnet_make();
-    return TypedData_Wrap_Struct(cVM, &jsonnet_vm_type, vm);
+    struct jsonnet_vm_wrap *vm;
+    VALUE self = TypedData_Make_Struct(cVM, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
+    vm->vm = jsonnet_make();
+    vm->callback = Qnil;
+    return self;
 }
 
 static void
 vm_free(void *ptr) {
-    jsonnet_destroy((struct JsonnetVm*)ptr);
+    struct jsonnet_vm_wrap *vm = (struct jsonnet_vm_wrap*)ptr;
+    jsonnet_destroy(vm->vm);
+    REALLOC_N(vm, struct jsonnet_vm_wrap, 0);
 }
 
 static VALUE
 vm_evaluate_file(VALUE self, VALUE fname, VALUE encoding, VALUE multi_p)
 {
-    struct JsonnetVm *vm;
+    struct jsonnet_vm_wrap *vm;
     int error;
     char *result;
     rb_encoding *const enc = rb_to_encoding(encoding);
 
-    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
+    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
     FilePathValue(fname);
     if (RTEST(multi_p)) {
-        result = jsonnet_evaluate_file_multi(vm, StringValueCStr(fname), &error);
+        result = jsonnet_evaluate_file_multi(vm->vm, StringValueCStr(fname), &error);
     }
     else {
-        result = jsonnet_evaluate_file(vm, StringValueCStr(fname), &error);
+        result = jsonnet_evaluate_file(vm->vm, StringValueCStr(fname), &error);
     }
 
     if (error) {
-        raise_eval_error(vm, result, rb_enc_get(fname));
+        raise_eval_error(vm->vm, result, rb_enc_get(fname));
     }
-    return RTEST(multi_p) ? fileset_new(vm, result, enc) : str_new_json(vm, result, enc);
+    return RTEST(multi_p) ? fileset_new(vm->vm, result, enc) : str_new_json(vm->vm, result, enc);
 }
 
 static VALUE
 vm_evaluate(VALUE self, VALUE snippet, VALUE fname, VALUE multi_p)
 {
-    struct JsonnetVm *vm;
+    struct jsonnet_vm_wrap *vm;
     int error;
     char *result;
 
     rb_encoding *enc = enc_assert_asciicompat(StringValue(snippet));
-    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
+    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
     FilePathValue(fname);
     if (RTEST(multi_p)) {
         result = jsonnet_evaluate_snippet_multi(
-                vm,
+                vm->vm,
                 StringValueCStr(fname), StringValueCStr(snippet), &error);
     }
     else {
         result = jsonnet_evaluate_snippet(
-                vm,
+                vm->vm,
                 StringValueCStr(fname), StringValueCStr(snippet), &error);
     }
 
     if (error) {
-        raise_eval_error(vm, result, rb_enc_get(fname));
+        raise_eval_error(vm->vm, result, rb_enc_get(fname));
     }
-    return RTEST(multi_p) ? fileset_new(vm, result, enc) : str_new_json(vm, result, enc);
+    return RTEST(multi_p) ? fileset_new(vm->vm, result, enc) : str_new_json(vm->vm, result, enc);
+}
+
+static VALUE
+import_callback_thunk0(VALUE args)
+{
+    VALUE callback = rb_ary_entry(args, 0);
+    return rb_funcall(callback, id_call, 2, rb_ary_entry(args, 1), rb_ary_entry(args, 2));
+}
+
+static char *
+import_callback_thunk(void *ctx, const char *base, const char *rel, char **found_here, int *success)
+{
+    struct jsonnet_vm_wrap *const vm = (struct jsonnet_vm_wrap*)ctx;
+    int state;
+    VALUE result, args;
+
+    args = rb_ary_tmp_new(3);
+    rb_ary_push(args, vm->callback);
+    rb_ary_push(args, rb_enc_str_new_cstr(base, rb_filesystem_encoding()));
+    rb_ary_push(args, rb_enc_str_new_cstr(rel, rb_filesystem_encoding()));
+    result = rb_protect(import_callback_thunk0, args, &state);
+
+    if (state) {
+        VALUE err = rb_errinfo();
+        VALUE msg, name;
+
+        rb_set_errinfo(Qnil);
+        name = rb_class_name(rb_obj_class(err));
+        msg = rb_funcall(err, id_message, 0);
+        if (rb_str_strlen(name)) {
+            if (rb_str_strlen(msg)) {
+                msg = rb_str_concat(rb_str_cat_cstr(name, " : "), msg);
+            } else {
+                msg = name;
+            }
+        } else if (!rb_str_strlen(msg)) {
+            msg = rb_sprintf("cannot import %s from %s", rel, base);
+        }
+        *success = 0;
+        return str_jsonnet_cstr(vm->vm, msg);
+    }
+
+    result = rb_Array(result);
+    *success = 1;
+    *found_here = str_jsonnet_cstr(vm->vm, rb_ary_entry(result, 1));
+    return str_jsonnet_cstr(vm->vm, rb_ary_entry(result, 0));
+}
+
+/**
+ * Sets a custom way to resolve "import" expression.
+ * @param [#call] callback receives two parameters and returns two values.
+ *                The first parameter "base" is a base directory to resolve 
+ *                "rel" from.
+ *                The second parameter "rel" is an absolute or a relative
+ *                path to the file to import.
+ *                The first return value is the content of the imported file.
+ *                The second return value is the resolved path of the imported file.
+ */
+static VALUE
+vm_set_import_callback(VALUE self, VALUE callback)
+{
+    struct jsonnet_vm_wrap *vm;
+    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
+
+    vm->callback = callback;
+    jsonnet_import_callback(vm->vm, import_callback_thunk, vm);
+    return callback;
 }
 
 /*
@@ -183,39 +275,39 @@ vm_evaluate(VALUE self, VALUE snippet, VALUE fname, VALUE multi_p)
 static VALUE
 vm_ext_var(VALUE self, VALUE key, VALUE val)
 {
-    struct JsonnetVm *vm;
+    struct jsonnet_vm_wrap *vm;
 
     enc_assert_asciicompat(StringValue(key));
     enc_assert_asciicompat(StringValue(val));
-    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
-    jsonnet_ext_var(vm, StringValueCStr(key), StringValueCStr(val));
+    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
+    jsonnet_ext_var(vm->vm, StringValueCStr(key), StringValueCStr(val));
     return Qnil;
 }
 
 static VALUE
 vm_set_max_stack(VALUE self, VALUE val)
 {
-    struct JsonnetVm *vm;
-    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
-    jsonnet_max_stack(vm, NUM2UINT(val));
+    struct jsonnet_vm_wrap *vm;
+    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
+    jsonnet_max_stack(vm->vm, NUM2UINT(val));
     return Qnil;
 }
 
 static VALUE
 vm_set_gc_min_objects(VALUE self, VALUE val)
 {
-    struct JsonnetVm *vm;
-    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
-    jsonnet_gc_min_objects(vm, NUM2UINT(val));
+    struct jsonnet_vm_wrap *vm;
+    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
+    jsonnet_gc_min_objects(vm->vm, NUM2UINT(val));
     return Qnil;
 }
 
 static VALUE
 vm_set_gc_growth_trigger(VALUE self, VALUE val)
 {
-    struct JsonnetVm *vm;
-    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
-    jsonnet_gc_growth_trigger(vm, NUM2DBL(val));
+    struct jsonnet_vm_wrap *vm;
+    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
+    jsonnet_gc_growth_trigger(vm->vm, NUM2DBL(val));
     return Qnil;
 }
 
@@ -226,33 +318,36 @@ vm_set_gc_growth_trigger(VALUE self, VALUE val)
 static VALUE
 vm_set_string_output(VALUE self, VALUE val)
 {
-    struct JsonnetVm *vm;
-    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
-    jsonnet_string_output(vm, RTEST(val));
+    struct jsonnet_vm_wrap *vm;
+    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
+    jsonnet_string_output(vm->vm, RTEST(val));
     return Qnil;
 }
 
 static VALUE
 vm_set_max_trace(VALUE self, VALUE val)
 {
-    struct JsonnetVm *vm;
-    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
-    jsonnet_max_trace(vm, NUM2UINT(val));
+    struct jsonnet_vm_wrap *vm;
+    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
+    jsonnet_max_trace(vm->vm, NUM2UINT(val));
     return Qnil;
 }
 
 static VALUE
 vm_set_debug_ast(VALUE self, VALUE val)
 {
-    struct JsonnetVm *vm;
-    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
-    jsonnet_debug_ast(vm, RTEST(val));
+    struct jsonnet_vm_wrap *vm;
+    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
+    jsonnet_debug_ast(vm->vm, RTEST(val));
     return Qnil;
 }
 
 void
 Init_jsonnet_wrap(void)
 {
+    id_call = rb_intern("call");
+    id_message = rb_intern("message");
+
     VALUE mJsonnet = rb_define_module("Jsonnet");
     rb_define_singleton_method(mJsonnet, "libversion", jw_s_version, 0);
 
@@ -267,6 +362,7 @@ Init_jsonnet_wrap(void)
     rb_define_method(cVM, "string_output=", vm_set_string_output, 1);
     rb_define_method(cVM, "max_trace=", vm_set_max_trace, 1);
     rb_define_method(cVM, "debug_ast=", vm_set_debug_ast, 1);
+    rb_define_method(cVM, "import_callback=", vm_set_import_callback, 1);
 
     eEvaluationError = rb_define_class_under(mJsonnet, "EvaluationError", rb_eRuntimeError);
     eUnsupportedEncodingError =
