@@ -1,23 +1,37 @@
 require 'jsonnet'
 
 require 'json'
+require 'tempfile'
 require 'test/unit'
 
 class TestVM < Test::Unit::TestCase
   test 'Jsonnet::VM#evaluate_file evaluates file' do
     vm = Jsonnet::VM.new
-    result = vm.evaluate_file example_file('example.jsonnet')
-
-    assert_equal JSON.parse(<<-EOS), JSON.parse(result)
+    with_example_file(%<
+      local myvar = 1;
+      {
+        ["foo" + myvar]: myvar,
+      }
+    >) {|fname|
+      result = vm.evaluate_file(fname)
+      assert_equal JSON.parse(<<-EOS), JSON.parse(result)
       {"foo1": 1}
-    EOS
+      EOS
+    }
   end
 
   test 'Jsonnet::VM#evaluate_file raises an EvaluationError on error' do
     vm = Jsonnet::VM.new
-    assert_raise(Jsonnet::EvaluationError) do
-      vm.evaluate_file example_file('error.jsonnet')
-    end
+    with_example_file(%<
+      {
+        // unbound variable
+        ["foo" + myvar]: myvar,
+      }
+    >) {|fname|
+      assert_raise(Jsonnet::EvaluationError) do
+        vm.evaluate_file(fname)
+      end
+    }
   end
 
   test 'Jsonnet::VM#evaluate evaluates snippet' do
@@ -100,21 +114,52 @@ class TestVM < Test::Unit::TestCase
 
   test 'Jsonnet::VM#evaluate_file returns a JSON per filename on multi mode' do
     vm = Jsonnet::VM.new
-    result = vm.evaluate_file(example_file("example_multi.jsonnet"), multi: true)
-    expected = {
-      'foo1' => [1],
-      'bar1' => {'baz2' => 2},
-    }
-    assert_equal expected.keys.sort, result.keys.sort
-    expected.each do |fname, value|
-      assert_not_nil result[fname]
-      assert_equal value, JSON.parse(result[fname])
+    [
+      [ "{}", {} ],
+      [
+        %<
+          local myvar = 1;
+          { ["foo" + myvar]: [myvar] }
+        >,
+        {
+          'foo1' => [1],
+        }
+      ],
+      [
+        %<
+          local myvar = 1;
+          {
+            ["foo" + myvar]: [myvar],
+            ["bar" + myvar]: {
+              ["baz" + (myvar+1)]: myvar+1,
+            },
+          }
+        >,
+        {
+          'foo1' => [1],
+          'bar1' => {'baz2' => 2},
+        }
+      ],
+    ].each do |jsonnet, expected|
+      with_example_file(jsonnet) {|fname|
+        result = vm.evaluate_file(fname, multi: true)
+        assert_equal expected.keys.sort, result.keys.sort
+        expected.each do |fname, value|
+          assert_not_nil result[fname]
+          assert_equal value, JSON.parse(result[fname])
+        end
+      }
     end
   end
 
   private
-  def example_file(name)
-    File.join(File.dirname(__FILE__), name)
+  def with_example_file(content)
+    Tempfile.open("example.jsonnet") {|f|
+      f.print content
+      f.flush
+      f.rewind
+      yield f.path
+    }
   end
 end
 
