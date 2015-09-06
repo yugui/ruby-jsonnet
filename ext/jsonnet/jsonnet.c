@@ -10,6 +10,7 @@ static VALUE cVM;
 static VALUE eEvaluationError;
 
 static void vm_free(void *ptr);
+
 static const rb_data_type_t jsonnet_vm_type = {
     "JsonnetVm",
     {
@@ -53,6 +54,15 @@ str_new_json(struct JsonnetVm *vm, char *json)
     return str;
 }
 
+/**
+ * Returns a Hash, whose keys are file names in the multi-mode of Jsonnet,
+ * and whose values are corresponding JSON values.
+ * It automatically frees \c json just after constructing the return value.
+ *
+ * @param[in] vm   a JsonnetVM
+ * @param[in] buf  NUL-separated and double-NUL-terminated sequence of strings returned by \c vm.
+ * @return Hash
+ */
 static VALUE
 fileset_new(struct JsonnetVm *vm, char *buf)
 {
