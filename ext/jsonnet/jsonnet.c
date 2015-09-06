@@ -90,6 +90,18 @@ fileset_new(struct JsonnetVm *vm, char *buf, rb_encoding *enc)
     return fileset;
 }
 
+static rb_encoding *
+enc_assert_asciicompat(VALUE str) {
+    rb_encoding *enc = rb_enc_get(str);
+    if (!rb_enc_asciicompat(enc)) {
+        rb_raise(
+            eUnsupportedEncodingError,
+            "jsonnet encoding must be ASCII-compatible but got %s",
+            rb_enc_name(enc));
+    }
+    return enc;
+}
+
 /*
  * call-seq:
  *  Jsonnet.version -> String
@@ -143,14 +155,7 @@ vm_evaluate(VALUE self, VALUE snippet, VALUE fname, VALUE multi_p)
     int error;
     char *result;
 
-    rb_encoding *enc = rb_enc_get(StringValue(snippet));
-    if (!rb_enc_asciicompat(enc)) {
-        rb_raise(
-            eUnsupportedEncodingError,
-            "jsonnet source encoding must be ASCII-compatible but got %s",
-            rb_enc_name(enc));
-    }
-
+    rb_encoding *enc = enc_assert_asciicompat(StringValue(snippet));
     TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
     FilePathValue(fname);
     if (RTEST(multi_p)) {
@@ -170,6 +175,18 @@ vm_evaluate(VALUE self, VALUE snippet, VALUE fname, VALUE multi_p)
     return RTEST(multi_p) ? fileset_new(vm, result, enc) : str_new_json(vm, result, enc);
 }
 
+static VALUE
+vm_ext_var(VALUE self, VALUE key, VALUE val)
+{
+    struct JsonnetVm *vm;
+
+    enc_assert_asciicompat(StringValue(key));
+    enc_assert_asciicompat(StringValue(val));
+    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
+    jsonnet_ext_var(vm, StringValueCStr(key), StringValueCStr(val));
+    return Qnil;
+}
+
 void
 Init_jsonnet_wrap(void)
 {
@@ -178,6 +195,7 @@ Init_jsonnet_wrap(void)
 
     cVM = rb_define_class_under(mJsonnet, "VM", rb_cData);
     rb_define_singleton_method(cVM, "new", vm_s_new, 0);
+    rb_define_method(cVM, "ext_var", vm_ext_var, 2);
     rb_define_private_method(cVM, "eval_file", vm_evaluate_file, 3);
     rb_define_private_method(cVM, "eval_snippet", vm_evaluate, 3);
 

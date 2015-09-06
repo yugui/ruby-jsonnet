@@ -110,6 +110,13 @@ class TestVM < Test::Unit::TestCase
     end
   end
 
+  test "Jsonnet::VM#ext_var binds a variable" do
+    vm = Jsonnet::VM.new
+    vm.ext_var("var1", "foo")
+    result = vm.evaluate('[std.extVar("var1")]')
+    assert_equal JSON.parse('["foo"]'), JSON.parse(result)
+  end
+
   test 'Jsonnet::VM#evaluate returns a JSON per filename on multi mode' do
     vm = Jsonnet::VM.new
     [
