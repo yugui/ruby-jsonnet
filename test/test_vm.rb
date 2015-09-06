@@ -195,6 +195,34 @@ class TestVM < Test::Unit::TestCase
     end
   end
 
+  test "Jsonnet::VM responds to max_stack=" do
+    Jsonnet::VM.new.max_stack = 1
+  end
+
+  test "Jsonnet::VM responds to gc_min_objects=" do
+    Jsonnet::VM.new.gc_min_objects = 1
+  end
+
+  test "Jsonnet::VM responds to gc_growth_trigger=" do
+    Jsonnet::VM.new.gc_growth_trigger = 1.5
+  end
+
+  test "Jsonnet::VM responds to max_trace=" do
+    Jsonnet::VM.new.max_trace = 1
+  end
+
+  test "Jsonnet::VM responds to debug_ast=" do
+    Jsonnet::VM.new.debug_ast = true
+  end
+
+  test "Jsonnet::VM#string_output lets the VM output a raw string" do
+    vm = Jsonnet::VM.new
+    vm.string_output = true
+    assert_equal "foo\n", vm.evaluate(%q[ "foo" ])
+    vm.string_output = false
+    assert_equal ["foo"], JSON.parse(vm.evaluate(%q[ ["foo"] ]))
+  end
+
   private
   def with_example_file(content)
     Tempfile.open("example.jsonnet") {|f|

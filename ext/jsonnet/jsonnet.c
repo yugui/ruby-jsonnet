@@ -175,6 +175,11 @@ vm_evaluate(VALUE self, VALUE snippet, VALUE fname, VALUE multi_p)
     return RTEST(multi_p) ? fileset_new(vm, result, enc) : str_new_json(vm, result, enc);
 }
 
+/*
+ * Binds an external variable to a value.
+ * @param [String] key name of the variable
+ * @param [String] val the value
+ */
 static VALUE
 vm_ext_var(VALUE self, VALUE key, VALUE val)
 {
@@ -187,6 +192,64 @@ vm_ext_var(VALUE self, VALUE key, VALUE val)
     return Qnil;
 }
 
+static VALUE
+vm_set_max_stack(VALUE self, VALUE val)
+{
+    struct JsonnetVm *vm;
+    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
+    jsonnet_max_stack(vm, NUM2UINT(val));
+    return Qnil;
+}
+
+static VALUE
+vm_set_gc_min_objects(VALUE self, VALUE val)
+{
+    struct JsonnetVm *vm;
+    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
+    jsonnet_gc_min_objects(vm, NUM2UINT(val));
+    return Qnil;
+}
+
+static VALUE
+vm_set_gc_growth_trigger(VALUE self, VALUE val)
+{
+    struct JsonnetVm *vm;
+    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
+    jsonnet_gc_growth_trigger(vm, NUM2DBL(val));
+    return Qnil;
+}
+
+/*
+ * Let #evalutae and #evaluate_file return a raw String instead of JSON-encoded string if val is true
+ * @param [Boolean] val
+ */
+static VALUE
+vm_set_string_output(VALUE self, VALUE val)
+{
+    struct JsonnetVm *vm;
+    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
+    jsonnet_string_output(vm, RTEST(val));
+    return Qnil;
+}
+
+static VALUE
+vm_set_max_trace(VALUE self, VALUE val)
+{
+    struct JsonnetVm *vm;
+    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
+    jsonnet_max_trace(vm, NUM2UINT(val));
+    return Qnil;
+}
+
+static VALUE
+vm_set_debug_ast(VALUE self, VALUE val)
+{
+    struct JsonnetVm *vm;
+    TypedData_Get_Struct(self, struct JsonnetVm, &jsonnet_vm_type, vm);
+    jsonnet_debug_ast(vm, RTEST(val));
+    return Qnil;
+}
+
 void
 Init_jsonnet_wrap(void)
 {
@@ -195,9 +258,15 @@ Init_jsonnet_wrap(void)
 
     cVM = rb_define_class_under(mJsonnet, "VM", rb_cData);
     rb_define_singleton_method(cVM, "new", vm_s_new, 0);
-    rb_define_method(cVM, "ext_var", vm_ext_var, 2);
     rb_define_private_method(cVM, "eval_file", vm_evaluate_file, 3);
     rb_define_private_method(cVM, "eval_snippet", vm_evaluate, 3);
+    rb_define_method(cVM, "ext_var", vm_ext_var, 2);
+    rb_define_method(cVM, "max_stack=", vm_set_max_stack, 1);
+    rb_define_method(cVM, "gc_min_objects=", vm_set_gc_min_objects, 1);
+    rb_define_method(cVM, "gc_growth_trigger=", vm_set_gc_growth_trigger, 1);
+    rb_define_method(cVM, "string_output=", vm_set_string_output, 1);
+    rb_define_method(cVM, "max_trace=", vm_set_max_trace, 1);
+    rb_define_method(cVM, "debug_ast=", vm_set_debug_ast, 1);
 
     eEvaluationError = rb_define_class_under(mJsonnet, "EvaluationError", rb_eRuntimeError);
     eUnsupportedEncodingError =
