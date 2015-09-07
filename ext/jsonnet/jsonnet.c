@@ -24,11 +24,12 @@ struct jsonnet_vm_wrap {
 };
 
 static void vm_free(void *ptr);
+static void vm_mark(void *ptr);
 
 static const rb_data_type_t jsonnet_vm_type = {
     "JsonnetVm",
     {
-      /* dmark = */ 0,
+      /* dmark = */ vm_mark,
       /* dfree = */ vm_free,
       /* dsize = */ 0,
     },
@@ -135,7 +136,8 @@ jw_s_version(VALUE mod)
 }
 
 static VALUE
-vm_s_new(VALUE mod) {
+vm_s_new(VALUE mod)
+{
     struct jsonnet_vm_wrap *vm;
     VALUE self = TypedData_Make_Struct(cVM, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
     vm->vm = jsonnet_make();
@@ -144,10 +146,18 @@ vm_s_new(VALUE mod) {
 }
 
 static void
-vm_free(void *ptr) {
+vm_free(void *ptr)
+{
     struct jsonnet_vm_wrap *vm = (struct jsonnet_vm_wrap*)ptr;
     jsonnet_destroy(vm->vm);
     REALLOC_N(vm, struct jsonnet_vm_wrap, 0);
+}
+
+static void
+vm_mark(void *ptr)
+{
+    struct jsonnet_vm_wrap *vm = (struct jsonnet_vm_wrap*)ptr;
+    rb_gc_mark(vm->callback);
 }
 
 static VALUE
