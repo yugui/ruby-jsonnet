@@ -33,5 +33,16 @@ module Jsonnet
     def evaluate_file(filename, encoding: Encoding.default_external, multi: false)
       eval_file(filename, encoding, multi)
     end
+
+    ##
+    # Lets the given block handle "import" expression of Jsonnet.
+    # @yieldparam  [String] base base path to resolve "rel" from.
+    # @yieldparam  [String] rel  a relative or absolute path to the file to be imported
+    # @yieldreturn [Array<String>] a pair of the content of the imported file and
+    #                              its path.
+    def handle_import
+      self.import_callback = Proc.new
+      nil
+    end
   end
 end
