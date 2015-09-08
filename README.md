@@ -2,10 +2,15 @@
 
 Jsonnet processor library.  Wraps the official C++ implementation with a Ruby extention library.
 
-## Status
-Pre-alpha.  Under development.
-
 ## Installation
+
+Install libjsonnet:
+
+    $ git clone https://github.com/google/jsonnet.git
+    $ cd jsonnet
+    $ make
+    $ sudo cp libjsonnet.so /usr/local/lib/libjsonnet.so
+    $ sudo cp libjsonnet.h /usr/local/include/libjsonnet.h
 
 Add this line to your application's Gemfile:
 
