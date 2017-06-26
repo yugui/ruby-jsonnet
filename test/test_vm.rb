@@ -225,7 +225,7 @@ class TestVM < Test::Unit::TestCase
       case [base, rel]
       when ['/path/to/base/', 'imported1.jsonnet']
         return <<-EOS, '/path/to/imported1/imported1.jsonnet'
-          import "imported2.jsonnet" {
+          (import "imported2.jsonnet") + {
             b: 2,
           }
         EOS
@@ -238,7 +238,7 @@ class TestVM < Test::Unit::TestCase
       end
     }
     result = vm.evaluate(<<-EOS, filename: "/path/to/base/example.jsonnet")
-      import "imported1.jsonnet" { c: 3 }
+      (import "imported1.jsonnet") + { c: 3 }
     EOS
 
     expected = {"a" => 1, "b" => 2, "c" => 3}
@@ -251,7 +251,7 @@ class TestVM < Test::Unit::TestCase
     vm.import_callback = ->(base, rel) { called = true; raise }
     assert_raise(Jsonnet::EvaluationError) {
       vm.evaluate(<<-EOS)
-        import "a.jsonnet" {}
+        (import "a.jsonnet") + {}
       EOS
     }
     assert_true called
