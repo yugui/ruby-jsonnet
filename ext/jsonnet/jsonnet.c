@@ -259,7 +259,7 @@ import_callback_thunk(void *ctx, const char *base, const char *rel, char **found
 /**
  * Sets a custom way to resolve "import" expression.
  * @param [#call] callback receives two parameters and returns two values.
- *                The first parameter "base" is a base directory to resolve 
+ *                The first parameter "base" is a base directory to resolve
  *                "rel" from.
  *                The second parameter "rel" is an absolute or a relative
  *                path to the file to import.

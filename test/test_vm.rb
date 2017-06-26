@@ -47,7 +47,7 @@ class TestVM < Test::Unit::TestCase
     vm = Jsonnet::VM.new
     begin
       with_example_file(%q{ ["unterminated string }) {|fname|
-        vm.evaluate_file(fname.encode(Encoding::SJIS)) 
+        vm.evaluate_file(fname.encode(Encoding::SJIS))
       }
     rescue Jsonnet::EvaluationError => e
       assert_equal Encoding::SJIS, e.message.encoding
@@ -104,7 +104,7 @@ class TestVM < Test::Unit::TestCase
   test "Jsonnet::VM#evaluate raises an error in the encoding of filename" do
     vm = Jsonnet::VM.new
     begin
-      vm.evaluate(%Q{ ["unterminated string }, filename: "テスト.json".encode(Encoding::SJIS)) 
+      vm.evaluate(%Q{ ["unterminated string }, filename: "テスト.json".encode(Encoding::SJIS))
     rescue Jsonnet::EvaluationError => e
       assert_equal Encoding::SJIS, e.message.encoding
     end
