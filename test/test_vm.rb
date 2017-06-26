@@ -211,10 +211,6 @@ class TestVM < Test::Unit::TestCase
     Jsonnet::VM.new.max_trace = 1
   end
 
-  test "Jsonnet::VM responds to debug_ast=" do
-    Jsonnet::VM.new.debug_ast = true
-  end
-
   test "Jsonnet::VM#string_output lets the VM output a raw string" do
     vm = Jsonnet::VM.new
     vm.string_output = true

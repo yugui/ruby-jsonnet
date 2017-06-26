@@ -343,15 +343,6 @@ vm_set_max_trace(VALUE self, VALUE val)
     return Qnil;
 }
 
-static VALUE
-vm_set_debug_ast(VALUE self, VALUE val)
-{
-    struct jsonnet_vm_wrap *vm;
-    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
-    jsonnet_debug_ast(vm->vm, RTEST(val));
-    return Qnil;
-}
-
 void
 Init_jsonnet_wrap(void)
 {
@@ -371,7 +362,6 @@ Init_jsonnet_wrap(void)
     rb_define_method(cVM, "gc_growth_trigger=", vm_set_gc_growth_trigger, 1);
     rb_define_method(cVM, "string_output=", vm_set_string_output, 1);
     rb_define_method(cVM, "max_trace=", vm_set_max_trace, 1);
-    rb_define_method(cVM, "debug_ast=", vm_set_debug_ast, 1);
     rb_define_method(cVM, "import_callback=", vm_set_import_callback, 1);
 
     eEvaluationError = rb_define_class_under(mJsonnet, "EvaluationError", rb_eRuntimeError);
