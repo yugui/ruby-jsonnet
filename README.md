@@ -8,9 +8,9 @@ Install libjsonnet:
 
     $ git clone https://github.com/google/jsonnet.git
     $ cd jsonnet
-    $ make
+    $ make libjsonnet.so
     $ sudo cp libjsonnet.so /usr/local/lib/libjsonnet.so
-    $ sudo cp libjsonnet.h /usr/local/include/libjsonnet.h
+    $ sudo cp include/libjsonnet.h /usr/local/include/libjsonnet.h
 
 Add this line to your application's Gemfile:
 
