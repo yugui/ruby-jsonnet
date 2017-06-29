@@ -61,7 +61,31 @@ gem install jsonnet -- --use-system-libraries
 
 ## Usage
 
-TODO: Write usage instructions here
+Load the library with `require "jsonnet"`
+
+You can evaluate a string of Jsonnet using `Jsonnet.parse`
+
+```
+irb(main):002:0> Jsonnet.evaluate('{ foo: "bar" }')
+=> {"foo"=>"bar"}
+```
+Or load a file using `Jsonnet.load`
+
+```
+irb(main):002:0> Jsonnet.load('example.jsonnet')
+=> {"baz"=>1}
+```
+
+To get closer to the C++ interface you can create an instance of `Jsonnet::VM`
+
+```
+irb(main):002:0> vm = Jsonnet::VM.new
+=> #<Jsonnet::VM:0x007fd29aa1e568>
+irb(main):003:0> vm.evaluate('{ foo: "bar" }')
+=> "{\n   \"foo\": \"bar\"\n}\n"
+irb(main):004:0> vm.evaluate_file('example.jsonnet')
+=> "{\n   \"baz\": 1\n}\n"
+```
 
 ## Contributing
 
