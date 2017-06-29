@@ -322,7 +322,7 @@ vm_set_gc_growth_trigger(VALUE self, VALUE val)
 }
 
 /*
- * Let #evalutae and #evaluate_file return a raw String instead of JSON-encoded string if val is true
+ * Let #evaluate and #evaluate_file return a raw String instead of JSON-encoded string if val is true
  * @param [Boolean] val
  */
 static VALUE
