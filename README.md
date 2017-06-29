@@ -1,16 +1,8 @@
 # Jsonnet
 
-Jsonnet processor library.  Wraps the official C++ implementation with a Ruby extension library.
+[Jsonnet][] processor library.  Wraps the official C++ implementation with a Ruby extension library.
 
 ## Installation
-
-Install libjsonnet:
-
-    $ git clone https://github.com/google/jsonnet.git
-    $ cd jsonnet
-    $ make libjsonnet.so
-    $ sudo cp libjsonnet.so /usr/local/lib/libjsonnet.so
-    $ sudo cp include/libjsonnet.h /usr/local/include/libjsonnet.h
 
 Add this line to your application's Gemfile:
 
@@ -20,11 +12,50 @@ gem 'jsonnet'
 
 And then execute:
 
-    $ bundle
+```shell
+$ bundle install
+```
 
 Or install it yourself as:
 
-    $ gem install jsonnet
+```shell
+$ gem install jsonnet
+```
+
+By default this gem will compile and install Jsonnet (v0.9.4) as part of
+installation. However you can use the system version of Jsonnet if you prefer.
+This would be the recommended route if you want to use a different version
+of Jsonnet or are having problems installing this.
+
+To install libjsonnet:
+
+```shell
+$ git clone https://github.com/google/jsonnet.git
+$ cd jsonnet
+$ make libjsonnet.so
+$ sudo cp libjsonnet.so /usr/local/lib/libjsonnet.so
+$ sudo cp include/libjsonnet.h /usr/local/include/libjsonnet.h
+```
+
+Note: /usr/local/lib and /usr/local/include are used as they are library lookup
+locations. You may need to adjust these for your system if you have errors
+running this gem saying it can't open libjsonnet.so - on Ubuntu for instance
+I found /lib worked when /usr/local/lib did not.
+
+To install this gem without jsonnet:
+
+Use `JSONNET_USE_SYSTEM_LIBRARIES` ENV var:
+
+```shell
+$ JSONNET_USE_SYSTEM_LIBRARIES=1 bundle install
+```
+
+or, the `--use-system-libraries` option:
+
+
+```shell
+gem install jsonnet -- --use-system-libraries
+```
 
 ## Usage
 
@@ -37,3 +68,5 @@ TODO: Write usage instructions here
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
 5. Create a new Pull Request
+
+[Jsonnet]: https://github.com/google/jsonnet
