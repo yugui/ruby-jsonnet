@@ -48,6 +48,12 @@ unless using_system_libraries?
   # but the makefile to fail. These commands add the necessary paths to do both
   $LIBPATH = ["#{recipe.path}/lib"] | $LIBPATH
   $CPPFLAGS << " -I#{recipe.path}/include"
+
+  # This resolves an issue where you can get improper linkage when compiling
+  # and get an error like "undefined symbol: _ZTVN10__cxxabiv121__vmi_class_type_infoE"
+  # experienced on ubuntu.
+  # See: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=193950
+  $LIBS << " -lstdc++"
 end
 
 abort 'libjsonnet.h not found' unless have_header('libjsonnet.h')
