@@ -47,7 +47,7 @@ class TestVM < Test::Unit::TestCase
     vm = Jsonnet::VM.new
     begin
       with_example_file(%q{ ["unterminated string }) {|fname|
-        vm.evaluate_file(fname.encode(Encoding::SJIS)) 
+        vm.evaluate_file(fname.encode(Encoding::SJIS))
       }
     rescue Jsonnet::EvaluationError => e
       assert_equal Encoding::SJIS, e.message.encoding
@@ -104,7 +104,7 @@ class TestVM < Test::Unit::TestCase
   test "Jsonnet::VM#evaluate raises an error in the encoding of filename" do
     vm = Jsonnet::VM.new
     begin
-      vm.evaluate(%Q{ ["unterminated string }, filename: "テスト.json".encode(Encoding::SJIS)) 
+      vm.evaluate(%Q{ ["unterminated string }, filename: "テスト.json".encode(Encoding::SJIS))
     rescue Jsonnet::EvaluationError => e
       assert_equal Encoding::SJIS, e.message.encoding
     end
@@ -211,10 +211,6 @@ class TestVM < Test::Unit::TestCase
     Jsonnet::VM.new.max_trace = 1
   end
 
-  test "Jsonnet::VM responds to debug_ast=" do
-    Jsonnet::VM.new.debug_ast = true
-  end
-
   test "Jsonnet::VM#string_output lets the VM output a raw string" do
     vm = Jsonnet::VM.new
     vm.string_output = true
@@ -229,7 +225,7 @@ class TestVM < Test::Unit::TestCase
       case [base, rel]
       when ['/path/to/base/', 'imported1.jsonnet']
         return <<-EOS, '/path/to/imported1/imported1.jsonnet'
-          import "imported2.jsonnet" {
+          (import "imported2.jsonnet") + {
             b: 2,
           }
         EOS
@@ -242,7 +238,7 @@ class TestVM < Test::Unit::TestCase
       end
     }
     result = vm.evaluate(<<-EOS, filename: "/path/to/base/example.jsonnet")
-      import "imported1.jsonnet" { c: 3 }
+      (import "imported1.jsonnet") + { c: 3 }
     EOS
 
     expected = {"a" => 1, "b" => 2, "c" => 3}
@@ -255,7 +251,7 @@ class TestVM < Test::Unit::TestCase
     vm.import_callback = ->(base, rel) { called = true; raise }
     assert_raise(Jsonnet::EvaluationError) {
       vm.evaluate(<<-EOS)
-        import "a.jsonnet" {}
+        (import "a.jsonnet") + {}
       EOS
     }
     assert_true called
