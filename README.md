@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/yugui/ruby-jsonnet.svg?branch=master)](https://travis-ci.org/yugui/ruby-jsonnet)
+
 # Jsonnet
 
 [Jsonnet][] processor library.  Wraps the official C++ implementation with a Ruby extension library.
