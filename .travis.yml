@@ -1,0 +1,16 @@
+language: ruby
+dist: trusty
+script: bundle exec rake test
+
+matrix:
+  include:
+  - os: linux
+    rvm: 2.3.4
+  - os: osx
+    rvm: 2.3.4
+  - os: linux
+    rvm: 2.4.0
+  - os: osx
+    rvm: 2.4.0
+  fast_finish: true
+
