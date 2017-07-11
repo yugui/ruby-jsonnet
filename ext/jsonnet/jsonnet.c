@@ -136,12 +136,13 @@ jw_s_version(VALUE mod)
 }
 
 static VALUE
-vm_s_new(VALUE mod)
+vm_s_new(int argc, const VALUE *argv, VALUE klass)
 {
     struct jsonnet_vm_wrap *vm;
     VALUE self = TypedData_Make_Struct(cVM, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
     vm->vm = jsonnet_make();
     vm->callback = Qnil;
+    rb_obj_call_init(self, argc, argv);
     return self;
 }
 
@@ -353,7 +354,7 @@ Init_jsonnet_wrap(void)
     rb_define_singleton_method(mJsonnet, "libversion", jw_s_version, 0);
 
     cVM = rb_define_class_under(mJsonnet, "VM", rb_cData);
-    rb_define_singleton_method(cVM, "new", vm_s_new, 0);
+    rb_define_singleton_method(cVM, "new", vm_s_new, -1);
     rb_define_private_method(cVM, "eval_file", vm_evaluate_file, 3);
     rb_define_private_method(cVM, "eval_snippet", vm_evaluate, 3);
     rb_define_method(cVM, "ext_var", vm_ext_var, 2);

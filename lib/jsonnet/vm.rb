@@ -1,5 +1,59 @@
+require "jsonnet/jsonnet_wrap"
+
 module Jsonnet
   class VM
+    class << self
+      ##
+      # Convenient method to evaluate a Jsonnet snippet.
+      #
+      # It implicitly instantiates a VM and then evaluate Jsonnet with the VM.
+      #
+      # @param snippet [String]  Jsonnet source string.
+      # @param options [Hash]  options to {.new} or options to {#evaluate}
+      # @return [String]
+      # @see #evaluate
+      def evaluate(snippet, options = {})
+        snippet_check = ->(key, value) { key.to_s.match(/^filename|multi$/) }
+        snippet_options = options.select &snippet_check
+        vm_options = options.reject &snippet_check
+        new(vm_options).evaluate(snippet, snippet_options)
+      end
+
+      ##
+      # Convenient method to evaluate a Jsonnet file.
+      #
+      # It implicitly instantiates a VM and then evaluates Jsonnet with the VM.
+      #
+      # @param filename [String]  Jsonnet source file.
+      # @param options [Hash]  options to {.new} or options to {#evaluate_file}
+      # @return [String]
+      # @see #evaluate_file
+      def evaluate_file(filename, options = {})
+        file_check = ->(key, value) { key.to_s.match(/^encoding|multi$/) }
+        file_options = options.select &file_check
+        vm_options = options.reject &file_check
+        new(vm_options).evaluate_file(filename, file_options)
+      end
+    end
+
+    ##
+    # initializes a new VM with the given configuration.
+    #
+    # @param [Hash] options  a mapping from option names to their values.
+    #    It can have names of writable attributes in VM class as keys.
+    # @return [VM] the VM.
+    def initialize(options = {})
+      options.each do |key, value|
+        method = "#{key}="
+        if respond_to?(method)
+          public_send(method, value)
+        else
+          raise UnsupportedOptionError.new("Jsonnet VM does not support #{key} option")
+        end
+      end
+      self
+    end
+
     ##
     # Evaluates Jsonnet source.
     #
@@ -44,5 +98,7 @@ module Jsonnet
       self.import_callback = Proc.new
       nil
     end
+
+    class UnsupportedOptionError < RuntimeError; end
   end
 end

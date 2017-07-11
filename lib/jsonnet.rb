@@ -1,7 +1,5 @@
 require "jsonnet/version"
-require "jsonnet/jsonnet_wrap"
 require "jsonnet/vm"
-require "jsonnet/evaluator"
 require "json"
 
 module Jsonnet
@@ -23,7 +21,7 @@ module Jsonnet
   #       output through {JSON.parse}[http://www.rubydoc.info/github/flori/json/JSON#parse-class_method]
   #       so those should be looked at for furhter details
   def evaluate(jsonnet, jsonnet_options: {}, json_options: {})
-    output = Evaluator.from_snippet(jsonnet, jsonnet_options)
+    output = VM.evaluate(jsonnet, jsonnet_options)
     JSON.parse(output, json_options)
   end
 
@@ -43,7 +41,7 @@ module Jsonnet
   #       output through {JSON.parse}[http://www.rubydoc.info/github/flori/json/JSON#parse-class_method]
   #       so those should be looked at for furhter details
   def load(path, jsonnet_options: {}, json_options: {})
-    output = Evaluator.from_file(path, jsonnet_options)
+    output = VM.evaluate_file(path, jsonnet_options)
     JSON.parse(output, json_options)
   end
 end
