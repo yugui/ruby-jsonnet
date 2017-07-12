@@ -130,6 +130,20 @@ class TestVM < Test::Unit::TestCase
     EOS
   end
 
+  test "Jsonnet::VM#tla_var binds a top-level variable to a string value" do
+    vm = Jsonnet::VM.new
+    vm.tla_var("var1", "foo")
+    result = vm.evaluate('function(var1) [var1, var1]')
+    assert_equal JSON.parse('["foo", "foo"]'), JSON.parse(result)
+  end
+
+  test "Jsonnet::VM#tla_var binds a top-level argument to a string value" do
+    vm = Jsonnet::VM.new
+    vm.tla_var("var1", "foo")
+    result = vm.evaluate('function(var1) [var1, var1]')
+    assert_equal JSON.parse('["foo", "foo"]'), JSON.parse(result)
+  end
+
   test 'Jsonnet::VM#evaluate returns a JSON per filename on multi mode' do
     vm = Jsonnet::VM.new
     [
