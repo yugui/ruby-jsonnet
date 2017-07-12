@@ -144,6 +144,22 @@ class TestVM < Test::Unit::TestCase
     assert_equal JSON.parse('["foo", "foo"]'), JSON.parse(result)
   end
 
+  test "Jsonnet::VM#tla_code binds a top-level argument to a code fragment" do
+    vm = Jsonnet::VM.new
+    vm.tla_code("var1", "{a:1}")
+    result = vm.evaluate('function(var1) [var1, var1]')
+    assert_equal JSON.parse(<<-EOS), JSON.parse(result)
+      [
+        {
+          "a": 1
+        },
+        {
+          "a": 1
+        }
+      ]
+    EOS
+  end
+
   test 'Jsonnet::VM#evaluate returns a JSON per filename on multi mode' do
     vm = Jsonnet::VM.new
     [
