@@ -278,6 +278,16 @@ vm_set_import_callback(VALUE self, VALUE callback)
     return callback;
 }
 
+#define vm_bind_variable(type, self, key, val) \
+    do { \
+        struct jsonnet_vm_wrap *vm; \
+        \
+        enc_assert_asciicompat(StringValue(key)); \
+        enc_assert_asciicompat(StringValue(val)); \
+        TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm); \
+        jsonnet_##type(vm->vm, StringValueCStr(key), StringValueCStr(val)); \
+    } while (0)
+
 /*
  * Binds an external variable to a value.
  * @param [String] key name of the variable
@@ -286,12 +296,7 @@ vm_set_import_callback(VALUE self, VALUE callback)
 static VALUE
 vm_ext_var(VALUE self, VALUE key, VALUE val)
 {
-    struct jsonnet_vm_wrap *vm;
-
-    enc_assert_asciicompat(StringValue(key));
-    enc_assert_asciicompat(StringValue(val));
-    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
-    jsonnet_ext_var(vm->vm, StringValueCStr(key), StringValueCStr(val));
+    vm_bind_variable(ext_var, self, key, val);
     return Qnil;
 }
 
@@ -303,12 +308,19 @@ vm_ext_var(VALUE self, VALUE key, VALUE val)
 static VALUE
 vm_ext_code(VALUE self, VALUE key, VALUE code)
 {
-    struct jsonnet_vm_wrap *vm;
+    vm_bind_variable(ext_code, self, key, code);
+    return Qnil;
+}
 
-    enc_assert_asciicompat(StringValue(key));
-    enc_assert_asciicompat(StringValue(code));
-    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
-    jsonnet_ext_code(vm->vm, StringValueCStr(key), StringValueCStr(code));
+/*
+ * Binds a top-level argument to a value.
+ * @param [String] key name of the variable
+ * @param [String] val the value
+ */
+static VALUE
+vm_tla_var(VALUE self, VALUE key, VALUE val)
+{
+    vm_bind_variable(tla_var, self, key, val);
     return Qnil;
 }
 
@@ -376,6 +388,7 @@ Init_jsonnet_wrap(void)
     rb_define_private_method(cVM, "eval_snippet", vm_evaluate, 3);
     rb_define_method(cVM, "ext_var", vm_ext_var, 2);
     rb_define_method(cVM, "ext_code", vm_ext_code, 2);
+    rb_define_method(cVM, "tla_var", vm_tla_var, 2);
     rb_define_method(cVM, "max_stack=", vm_set_max_stack, 1);
     rb_define_method(cVM, "gc_min_objects=", vm_set_gc_min_objects, 1);
     rb_define_method(cVM, "gc_growth_trigger=", vm_set_gc_growth_trigger, 1);
