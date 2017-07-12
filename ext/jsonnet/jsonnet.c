@@ -336,6 +336,24 @@ vm_tla_code(VALUE self, VALUE key, VALUE code)
     return Qnil;
 }
 
+/*
+ * Adds library search paths
+ */
+static VALUE
+vm_jpath_add_m(int argc, const VALUE *argv, VALUE self)
+{
+    struct jsonnet_vm_wrap *vm;
+    int i;
+
+    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
+    for (i = 0; i < argc; ++i) {
+        VALUE jpath = argv[i];
+        FilePathValue(jpath);
+        jsonnet_jpath_add(vm->vm, StringValueCStr(jpath));
+    }
+    return Qnil;
+}
+
 static VALUE
 vm_set_max_stack(VALUE self, VALUE val)
 {
@@ -402,6 +420,7 @@ Init_jsonnet_wrap(void)
     rb_define_method(cVM, "ext_code", vm_ext_code, 2);
     rb_define_method(cVM, "tla_var", vm_tla_var, 2);
     rb_define_method(cVM, "tla_code", vm_tla_code, 2);
+    rb_define_method(cVM, "jpath_add", vm_jpath_add_m, -1);
     rb_define_method(cVM, "max_stack=", vm_set_max_stack, 1);
     rb_define_method(cVM, "gc_min_objects=", vm_set_gc_min_objects, 1);
     rb_define_method(cVM, "gc_growth_trigger=", vm_set_gc_growth_trigger, 1);
