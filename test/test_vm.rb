@@ -110,11 +110,24 @@ class TestVM < Test::Unit::TestCase
     end
   end
 
-  test "Jsonnet::VM#ext_var binds a variable" do
+  test "Jsonnet::VM#ext_var binds a variable to a string value" do
     vm = Jsonnet::VM.new
     vm.ext_var("var1", "foo")
     result = vm.evaluate('[std.extVar("var1")]')
     assert_equal JSON.parse('["foo"]'), JSON.parse(result)
+  end
+
+  test "Jsonnet::VM#ext_code binds a variable to a code fragment" do
+    vm = Jsonnet::VM.new
+    vm.ext_code("var1", "{a:1}")
+    result = vm.evaluate('[std.extVar("var1")]')
+    assert_equal JSON.parse(<<-EOS), JSON.parse(result)
+      [
+        {
+          "a": 1
+        }
+      ]
+    EOS
   end
 
   test 'Jsonnet::VM#evaluate returns a JSON per filename on multi mode' do
