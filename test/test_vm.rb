@@ -300,6 +300,23 @@ class TestVM < Test::Unit::TestCase
     assert_true called
   end
 
+  test "Jsonnet::VM#jpath_add adds a library search path" do
+    vm = Jsonnet::VM.new
+    snippet = "(import 'jpath.libsonnet') {b: 2}"
+    assert_raise(Jsonnet::EvaluationError) {
+      vm.evaluate(snippet)
+    }
+
+    vm.jpath_add(File.join(__dir__, 'fixtures'))
+    result = vm.evaluate(snippet)
+    assert_equal JSON.parse(<<-EOS), JSON.parse(result)
+      {
+        "a": 1,
+        "b": 2
+      }
+    EOS
+  end
+
   private
   def with_example_file(content)
     Tempfile.open("example.jsonnet") {|f|
