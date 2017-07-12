@@ -295,6 +295,23 @@ vm_ext_var(VALUE self, VALUE key, VALUE val)
     return Qnil;
 }
 
+/*
+ * Binds an external variable to a code fragment.
+ * @param [String] key  name of the variable
+ * @param [String] code Jsonnet expression
+ */
+static VALUE
+vm_ext_code(VALUE self, VALUE key, VALUE code)
+{
+    struct jsonnet_vm_wrap *vm;
+
+    enc_assert_asciicompat(StringValue(key));
+    enc_assert_asciicompat(StringValue(code));
+    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
+    jsonnet_ext_code(vm->vm, StringValueCStr(key), StringValueCStr(code));
+    return Qnil;
+}
+
 static VALUE
 vm_set_max_stack(VALUE self, VALUE val)
 {
@@ -358,6 +375,7 @@ Init_jsonnet_wrap(void)
     rb_define_private_method(cVM, "eval_file", vm_evaluate_file, 3);
     rb_define_private_method(cVM, "eval_snippet", vm_evaluate, 3);
     rb_define_method(cVM, "ext_var", vm_ext_var, 2);
+    rb_define_method(cVM, "ext_code", vm_ext_code, 2);
     rb_define_method(cVM, "max_stack=", vm_set_max_stack, 1);
     rb_define_method(cVM, "gc_min_objects=", vm_set_gc_min_objects, 1);
     rb_define_method(cVM, "gc_growth_trigger=", vm_set_gc_growth_trigger, 1);
