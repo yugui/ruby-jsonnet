@@ -37,6 +37,14 @@ const rb_data_type_t jsonnet_vm_type = {
     /* flags = */ RUBY_TYPED_FREE_IMMEDIATELY
 };
 
+struct jsonnet_vm_wrap *
+rubyjsonnet_obj_to_vm(VALUE wrap) {
+    struct jsonnet_vm_wrap *vm;
+    TypedData_Get_Struct(wrap, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
+
+    return vm;
+}
+
 
 static VALUE
 vm_s_new(int argc, const VALUE *argv, VALUE klass)
@@ -67,12 +75,11 @@ vm_mark(void *ptr)
 static VALUE
 vm_evaluate_file(VALUE self, VALUE fname, VALUE encoding, VALUE multi_p)
 {
-    struct jsonnet_vm_wrap *vm;
     int error;
     char *result;
     rb_encoding *const enc = rb_to_encoding(encoding);
+    struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
 
-    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
     FilePathValue(fname);
     if (RTEST(multi_p)) {
         result = jsonnet_evaluate_file_multi(vm->vm, StringValueCStr(fname), &error);
@@ -90,12 +97,11 @@ vm_evaluate_file(VALUE self, VALUE fname, VALUE encoding, VALUE multi_p)
 static VALUE
 vm_evaluate(VALUE self, VALUE snippet, VALUE fname, VALUE multi_p)
 {
-    struct jsonnet_vm_wrap *vm;
     int error;
     char *result;
+    struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
 
     rb_encoding *enc = rubyjsonnet_assert_asciicompat(StringValue(snippet));
-    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
     FilePathValue(fname);
     if (RTEST(multi_p)) {
         result = jsonnet_evaluate_snippet_multi(
@@ -178,10 +184,9 @@ vm_tla_code(VALUE self, VALUE key, VALUE code)
 static VALUE
 vm_jpath_add_m(int argc, const VALUE *argv, VALUE self)
 {
-    struct jsonnet_vm_wrap *vm;
     int i;
+    struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
 
-    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
     for (i = 0; i < argc; ++i) {
         VALUE jpath = argv[i];
         FilePathValue(jpath);
@@ -193,8 +198,7 @@ vm_jpath_add_m(int argc, const VALUE *argv, VALUE self)
 static VALUE
 vm_set_max_stack(VALUE self, VALUE val)
 {
-    struct jsonnet_vm_wrap *vm;
-    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
+    struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
     jsonnet_max_stack(vm->vm, NUM2UINT(val));
     return Qnil;
 }
@@ -202,8 +206,7 @@ vm_set_max_stack(VALUE self, VALUE val)
 static VALUE
 vm_set_gc_min_objects(VALUE self, VALUE val)
 {
-    struct jsonnet_vm_wrap *vm;
-    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
+    struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
     jsonnet_gc_min_objects(vm->vm, NUM2UINT(val));
     return Qnil;
 }
@@ -211,8 +214,7 @@ vm_set_gc_min_objects(VALUE self, VALUE val)
 static VALUE
 vm_set_gc_growth_trigger(VALUE self, VALUE val)
 {
-    struct jsonnet_vm_wrap *vm;
-    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
+    struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
     jsonnet_gc_growth_trigger(vm->vm, NUM2DBL(val));
     return Qnil;
 }
@@ -224,8 +226,7 @@ vm_set_gc_growth_trigger(VALUE self, VALUE val)
 static VALUE
 vm_set_string_output(VALUE self, VALUE val)
 {
-    struct jsonnet_vm_wrap *vm;
-    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
+    struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
     jsonnet_string_output(vm->vm, RTEST(val));
     return Qnil;
 }
@@ -233,8 +234,7 @@ vm_set_string_output(VALUE self, VALUE val)
 static VALUE
 vm_set_max_trace(VALUE self, VALUE val)
 {
-    struct jsonnet_vm_wrap *vm;
-    TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
+    struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
     jsonnet_max_trace(vm->vm, NUM2UINT(val));
     return Qnil;
 }
