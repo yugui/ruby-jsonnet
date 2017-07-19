@@ -15,7 +15,10 @@ void rubyjsonnet_init_vm(VALUE mod);
 void rubyjsonnet_init_callbacks(VALUE cVM);
 void rubyjsonnet_init_helpers(VALUE mod);
 
+struct jsonnet_vm_wrap *rubyjsonnet_obj_to_vm(VALUE vm);
+
 rb_encoding *rubyjsonnet_assert_asciicompat(VALUE str);
 char *rubyjsonnet_str_to_cstr(struct JsonnetVm *vm, VALUE str);
+VALUE rubyjsonnet_format_exception(VALUE exc);
 
 #endif  /* RUBY_JSONNET_RUBY_JSONNET_H_ */

@@ -8,7 +8,6 @@
  */
 
 static ID id_call;
-static ID id_message;
 
 static VALUE
 import_callback_thunk0(VALUE args)
@@ -31,22 +30,12 @@ import_callback_thunk(void *ctx, const char *base, const char *rel, char **found
     result = rb_protect(import_callback_thunk0, args, &state);
 
     if (state) {
-        VALUE err = rb_errinfo();
-        VALUE msg, name;
-
-        rb_set_errinfo(Qnil);
-        name = rb_class_name(rb_obj_class(err));
-        msg = rb_funcall(err, id_message, 0);
-        if (rb_str_strlen(name)) {
-            if (rb_str_strlen(msg)) {
-                msg = rb_str_concat(rb_str_cat_cstr(name, " : "), msg);
-            } else {
-                msg = name;
-            }
-        } else if (!rb_str_strlen(msg)) {
+        VALUE msg = rubyjsonnet_format_exception(rb_errinfo());
+        if (msg == Qnil) {
             msg = rb_sprintf("cannot import %s from %s", rel, base);
         }
         *success = 0;
+        rb_set_errinfo(Qnil);
         return rubyjsonnet_str_to_cstr(vm->vm, msg);
     }
 
@@ -81,7 +70,6 @@ void
 rubyjsonnet_init_callbacks(VALUE cVM)
 {
     id_call = rb_intern("call");
-    id_message = rb_intern("message");
 
     rb_define_method(cVM, "import_callback=", vm_set_import_callback, 1);
 }
