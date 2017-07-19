@@ -8,12 +8,19 @@
 
 static ID id_message;
 
-/**
+/*
  * Indicates that the encoding of the given string is not allowed by
  * the C++ implementation of Jsonnet.
  */
 static VALUE eUnsupportedEncodingError;
 
+/**
+ * Asserts that the given string-like object is in an
+ * ASCII-compatible encoding.
+ *
+ * @param[in] str a String-like object
+ * @throw UnsupportedEncodingError on assertion failure.
+ */
 rb_encoding *
 rubyjsonnet_assert_asciicompat(VALUE str)
 {
@@ -39,6 +46,10 @@ rubyjsonnet_str_to_cstr(struct JsonnetVm *vm, VALUE str)
     return buf;
 }
 
+/**
+ * @return a human readable string which contains the class name of the
+ *   exception and its message. It might be nil on failure
+ */
 VALUE
 rubyjsonnet_format_exception(VALUE exc)
 {
@@ -57,9 +68,9 @@ rubyjsonnet_format_exception(VALUE exc)
 }
 
 void
-rubyjsonnet_init_helpers(VALUE mod)
+rubyjsonnet_init_helpers(VALUE mJsonnet)
 {
     id_message = rb_intern("message");
     eUnsupportedEncodingError =
-        rb_define_class_under(mod, "UnsupportedEncodingError", rb_eEncodingError);
+        rb_define_class_under(mJsonnet, "UnsupportedEncodingError", rb_eEncodingError);
 }
