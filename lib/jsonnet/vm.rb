@@ -99,6 +99,31 @@ module Jsonnet
       nil
     end
 
+    ##
+    # Define a function (native extension) in the VM and let the given block
+    # handle the invocation of the function.
+    #
+    # @param name [Symbol|String] name of the function.
+    #   Must be a valid identifier in Jsonnet.
+    # @param body [#call] body of the function.
+    # @yield calls the given block instead of `body` if `body` is `nil`
+    #
+    # @note Currently it cannot define keyword or optional paramters in Jsonnet.
+    #   Also all the positional optional parameters of the body are interpreted
+    #   as required parameters. And the body cannot have keyword, rest or
+    #   keyword rest paramters.
+    def define_function(name, body = nil)
+      body ||= Proc.new
+
+      params = body.parameters.map.with_index do |(type, name), i|
+        raise ArgumentError, "rest or keyword parameters are not allowed: #{type}" \
+          unless [:req, :opt].include? type
+
+        name || "p#{i}"
+      end
+      register_native_callback(name.to_sym, body, params);
+    end
+
     class UnsupportedOptionError < RuntimeError; end
   end
 end

@@ -10,6 +10,9 @@
 
 /*
  * Jsonnet evaluator
+ *
+ * call-seq:
+ *   Jsonnet::VM
  */
 static VALUE cVM;
 
@@ -52,7 +55,10 @@ vm_s_new(int argc, const VALUE *argv, VALUE klass)
     struct jsonnet_vm_wrap *vm;
     VALUE self = TypedData_Make_Struct(cVM, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
     vm->vm = jsonnet_make();
-    vm->callback = Qnil;
+    vm->import_callback = Qnil;
+    vm->native_callbacks.len = 0;
+    vm->native_callbacks.contexts = NULL;
+
     rb_obj_call_init(self, argc, argv);
     return self;
 }
@@ -60,16 +66,29 @@ vm_s_new(int argc, const VALUE *argv, VALUE klass)
 static void
 vm_free(void *ptr)
 {
+    int i;
     struct jsonnet_vm_wrap *vm = (struct jsonnet_vm_wrap*)ptr;
     jsonnet_destroy(vm->vm);
-    REALLOC_N(vm, struct jsonnet_vm_wrap, 0);
+
+    for (i = 0; i < vm->native_callbacks.len; ++i) {
+        struct native_callback_ctx *ctx = vm->native_callbacks.contexts[i];
+        RB_REALLOC_N(ctx, struct native_callback_ctx, 0);
+    }
+    RB_REALLOC_N(vm->native_callbacks.contexts, struct native_callback_ctx*, 0);
+
+    RB_REALLOC_N(vm, struct jsonnet_vm_wrap, 0);
 }
 
 static void
 vm_mark(void *ptr)
 {
+    int i;
     struct jsonnet_vm_wrap *vm = (struct jsonnet_vm_wrap*)ptr;
-    rb_gc_mark(vm->callback);
+
+    rb_gc_mark(vm->import_callback);
+    for (i = 0; i < vm->native_callbacks.len; ++i) {
+        rb_gc_mark(vm->native_callbacks.contexts[i]->callback);
+    }
 }
 
 static VALUE
@@ -240,9 +259,9 @@ vm_set_max_trace(VALUE self, VALUE val)
 }
 
 void
-rubyjsonnet_init_vm(VALUE mod)
+rubyjsonnet_init_vm(VALUE mJsonnet)
 {
-    cVM = rb_define_class_under(mod, "VM", rb_cData);
+    cVM = rb_define_class_under(mJsonnet, "VM", rb_cData);
     rb_define_singleton_method(cVM, "new", vm_s_new, -1);
     rb_define_private_method(cVM, "eval_file", vm_evaluate_file, 3);
     rb_define_private_method(cVM, "eval_snippet", vm_evaluate, 3);
@@ -259,7 +278,7 @@ rubyjsonnet_init_vm(VALUE mod)
 
     rubyjsonnet_init_callbacks(cVM);
 
-    eEvaluationError = rb_define_class_under(mod, "EvaluationError", rb_eRuntimeError);
+    eEvaluationError = rb_define_class_under(mJsonnet, "EvaluationError", rb_eRuntimeError);
 }
 
 /**

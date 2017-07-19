@@ -317,6 +317,66 @@ class TestVM < Test::Unit::TestCase
     EOS
   end
 
+  test "Jsonnet::VM#define_function adds a new native extension" do
+    vm = Jsonnet::VM.new
+    called = false
+
+    vm.define_function("myPow") do |x, y|
+      called = true
+      x ** y
+    end
+
+    result = vm.evaluate("std.native('myPow')(3, 4)")
+    assert_equal 3**4, JSON.load(result)
+    assert_true called
+  end
+
+  test "Jsonnet::VM#define_function passes various types of arguments" do
+    [
+      [%q(null), nil],
+      [%q("abc"), "abc"],
+      [%q(1), 1.0],
+      [%q(1.2), 1.2],
+      [%q(true), true],
+      [%q(false), false],
+    ].each do |expr, value|
+      vm = Jsonnet::VM.new
+      vm.define_function("myFunc") do |x|
+        assert_equal value, x
+        next nil
+      end
+      vm.evaluate("std.native('myFunc')(#{expr})")
+    end
+  end
+
+  test "Jsonnet::VM#define_function translates an exception in a native function into an error" do
+    vm = Jsonnet::VM.new
+    vm.define_function("myFunc") do |x|
+      raise "something wrong"
+    end
+    assert_raise(Jsonnet::EvaluationError) {
+      vm.evaluate("std.native('myFunc')(1)")
+    }
+  end
+
+  test "Jsonnet::VM#define_function let the function return a compound object" do
+    vm = Jsonnet::VM.new
+    vm.define_function("myCompound") do |x, y|
+      {
+        x => y,
+        y => [x, y, y, x],
+      }
+    end
+
+    result = vm.evaluate("std.native('myCompound')('abc', 'def')")
+    assert_equal JSON.parse(<<-EOS), JSON.parse(result)
+      {
+        "abc": "def",
+        "def": ["abc", "def", "def", "abc"]
+      }
+    EOS
+  end
+
   private
   def with_example_file(content)
     Tempfile.open("example.jsonnet") {|f|

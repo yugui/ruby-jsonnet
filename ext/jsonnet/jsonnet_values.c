@@ -2,7 +2,7 @@
 #include <ruby/intern.h>
 #include <libjsonnet.h>
 
-#include "jsonnet_vm.h"
+#include "ruby_jsonnet.h"
 
 static struct JsonnetJsonValue *
 protect_obj_to_json(struct JsonnetVm *vm, VALUE obj, struct JsonnetJsonValue *parent);
@@ -14,7 +14,7 @@ protect_obj_to_json(struct JsonnetVm *vm, VALUE obj, struct JsonnetJsonValue *pa
  * libjsonnet API.
  */
 VALUE
-jv_json_to_obj(struct JsonnetVm *vm, const struct JsonnetJsonValue* value)
+rubyjsonnet_json_to_obj(struct JsonnetVm *vm, const struct JsonnetJsonValue* value)
 {
     union {
         const char *str;
@@ -50,7 +50,7 @@ jv_json_to_obj(struct JsonnetVm *vm, const struct JsonnetJsonValue* value)
 static struct JsonnetJsonValue *
 string_to_json(struct JsonnetVm *vm, VALUE str)
 {
-    rubyjsonnet_enc_assert_asciicompat(str);
+    rubyjsonnet_assert_asciicompat(str);
     return jsonnet_json_make_string(vm, RSTRING_PTR(str));
 }
 
@@ -86,7 +86,7 @@ hash_item_to_json(VALUE key, VALUE value, VALUE paramsval)
         (const struct hash_to_json_params*)paramsval;
 
     StringValue(key);
-    rubyjsonnet_enc_assert_asciicompat(key);
+    rubyjsonnet_assert_asciicompat(key);
 
     jsonnet_json_object_append(params->vm, params->obj,
             StringValueCStr(key), 
@@ -167,9 +167,13 @@ protect_obj_to_json_block(VALUE paramsval)
 }
 
 /**
- * Safely calls a conversion function from a Ruby object to a JSON value.
+ * Safely converts a Ruby object into a JSON value.
  *
  * It automatically destroys \a parent on exception.
+ * @param[in] vm  a Jsonnet VM
+ * @param[in] obj a Ruby object to be converted
+ * @param[in] parent destroys this value on failure
+ * @throws can throw \c TypeError or other exceptions
  */
 static struct JsonnetJsonValue *
 protect_obj_to_json(struct JsonnetVm *vm, VALUE obj, struct JsonnetJsonValue *parent)
@@ -186,8 +190,17 @@ protect_obj_to_json(struct JsonnetVm *vm, VALUE obj, struct JsonnetJsonValue *pa
     rb_jump_tag(state);
 }
 
+/**
+ * Converts a Ruby object into a JSON value.
+ * Returns an error message on failure.
+ *
+ * @param[in] vm  a Jsonnet VM
+ * @param[in] obj a Ruby object to be converted
+ * @param[out] success  set to 1 on success, set to 0 on failure.
+ * @returns the converted value on success, an error message on failure.
+ */
 struct JsonnetJsonValue *
-jv_obj_to_json(struct JsonnetVm *vm, VALUE obj, int *success)
+rubyjsonnet_obj_to_json(struct JsonnetVm *vm, VALUE obj, int *success)
 {
     int state = 0;
     const struct protect_args args = {vm, obj};
