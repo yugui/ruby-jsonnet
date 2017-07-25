@@ -128,17 +128,11 @@ obj_to_json(struct JsonnetVm *vm, VALUE obj)
         return string_to_json(vm, converted);
     }
 
-    converted = rb_check_to_int(obj);
-    if (converted != Qnil) {
-        return num_to_json(vm, converted);
-    }
-
     converted = rb_check_to_float(obj);
     if (converted != Qnil) {
         return num_to_json(vm, converted);
     }
 
-    //TODO(yugui) support hash and array
     converted = rb_check_array_type(obj);
     if (converted != Qnil) {
         return ary_to_json(vm, converted);

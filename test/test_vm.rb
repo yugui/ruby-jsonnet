@@ -361,7 +361,7 @@ class TestVM < Test::Unit::TestCase
       [%q(null), nil],
       [%q("abc"), "abc"],
       [%q(1), 1.0],
-      [%q(1.2), 1.2],
+      [%q(1.25), 1.25],
       [%q(true), true],
       [%q(false), false],
     ].each do |expr, value|
@@ -371,6 +371,23 @@ class TestVM < Test::Unit::TestCase
         next nil
       end
       vm.evaluate("std.native('myFunc')(#{expr})")
+    end
+  end
+
+  test "Jsonnet::VM#define_function returns various types of values" do
+    [
+      [nil, nil],
+      ["abc", "abc"],
+      [1, 1.0],
+      [1.25, 1.25],
+      [true, true],
+      [false, false],
+    ].each do |retval, expected|
+      vm = Jsonnet::VM.new
+      vm.define_function("myFunc") { retval }
+
+      result = vm.evaluate("std.native('myFunc')()")
+      assert_equal expected, JSON.load(result)
     end
   end
 
