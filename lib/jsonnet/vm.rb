@@ -95,7 +95,7 @@ module Jsonnet
     # @yieldreturn [Array<String>] a pair of the content of the imported file and
     #                              its path.
     def handle_import
-      self.import_callback = Proc.new
+      self.import_callback = to_method(Proc.new)
       nil
     end
 
@@ -105,7 +105,7 @@ module Jsonnet
     #
     # @param name [Symbol|String] name of the function.
     #   Must be a valid identifier in Jsonnet.
-    # @param body [#call] body of the function.
+    # @param body [#to_proc] body of the function.
     # @yield calls the given block instead of `body` if `body` is `nil`
     #
     # @note Currently it cannot define keyword or optional paramters in Jsonnet.
@@ -113,15 +113,25 @@ module Jsonnet
     #   as required parameters. And the body cannot have keyword, rest or
     #   keyword rest paramters.
     def define_function(name, body = nil)
-      body ||= Proc.new
-
+      body = body ? body.to_proc : Proc.new
       params = body.parameters.map.with_index do |(type, name), i|
         raise ArgumentError, "rest or keyword parameters are not allowed: #{type}" \
           unless [:req, :opt].include? type
 
         name || "p#{i}"
       end
-      register_native_callback(name.to_sym, body, params);
+
+      register_native_callback(name.to_sym, to_method(body), params);
+    end
+
+    private
+    # Wraps the function body with a method so that `break` and `return`
+    # behave like `return` as they do in a body of Module#define_method.
+    def to_method(body)
+      mod = Module.new {
+        define_method(:dummy, body)
+      }
+      mod.instance_method(:dummy).bind(body.binding.receiver)
     end
 
     class UnsupportedOptionError < RuntimeError; end

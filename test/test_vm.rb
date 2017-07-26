@@ -300,6 +300,31 @@ class TestVM < Test::Unit::TestCase
     assert_true called
   end
 
+  test "Jsonnet::VM#handle_import treats global escapes as define_method does" do
+    num_eval = 0
+    begin
+      bodies = [
+        proc   {|rel, base| return 'null', '/x.libsonnet' },
+        lambda {|rel, base| return 'null', '/x.libsonnet' },
+        proc   {|rel, base| next 'null', '/x.libsonnet' },
+        lambda {|rel, base| next 'null', '/x.libsonnet' },
+        proc   {|rel, base| break 'null', '/x.libsonnet' },
+        lambda {|rel, base| break 'null', '/x.libsonnet' },
+      ]
+      bodies.each do |prc|
+        vm = Jsonnet::VM.new
+        vm.handle_import(&prc)
+
+        result = vm.evaluate('import "a.jsonnet"')
+        assert_nil JSON.load(result)
+
+        num_eval += 1
+      end
+    ensure
+      assert_equal bodies.size, num_eval
+    end
+  end
+
   test "Jsonnet::VM#jpath_add adds a library search path" do
     vm = Jsonnet::VM.new
     snippet = "(import 'jpath.libsonnet') {b: 2}"
@@ -375,6 +400,31 @@ class TestVM < Test::Unit::TestCase
         "def": ["abc", "def", "def", "abc"]
       }
     EOS
+  end
+
+  test "Jsonnet::VM#define_function treats global escapes as define_method does" do
+    num_eval = 0
+    begin
+      bodies = [
+        proc   {|x| return x },
+        lambda {|x| return x },
+        proc   {|x| next x },
+        lambda {|x| next x },
+        proc   {|x| break x },
+        lambda {|x| break x },
+      ]
+      bodies.each do |prc|
+        vm = Jsonnet::VM.new
+        vm.define_function(:myFunc, prc)
+
+        result = vm.evaluate('std.native("myFunc")(1.25) + 0.25')
+        assert_equal 1.25 + 0.25, JSON.load(result)
+
+        num_eval += 1
+      end
+    ensure
+      assert_equal bodies.size, num_eval
+    end
   end
 
   private
