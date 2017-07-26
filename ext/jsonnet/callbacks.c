@@ -1,7 +1,15 @@
+#include <string.h>
+
 #include <ruby/ruby.h>
 #include <libjsonnet.h>
 
 #include "ruby_jsonnet.h"
+
+/* Magic prefix which distinguishes Ruby-level non-exception global escapes 
+ * from other errors in Jsonnet.
+ * Any other errors in Jsonnet evaluation cannot contain this fragment of message.
+ */
+#define RUBYJSONNET_GLOBAL_ESCAPE_MAGIC "\x07\x03\x0c:rubytag:\x07\x03\x0c:"
 
 /*
  * callback support in VM
@@ -22,6 +30,69 @@ invoke_callback(VALUE args)
     return rb_funcall2(callback, id_call, len-1, RARRAY_PTR(args)+1);
 }
 
+/*
+ * Handles long jump caught by rb_protect() in a callback function.
+ *
+ * Returns an error message which represents rb_errinfo().
+ * It is the caller's responsibility to return the message to the Jsonnet VM
+ * in the right way.
+ * Also the caller of the VM must handle evaluation failure caused by the
+ * error message.
+ * \sa rubyjsonnet_jump_tag
+ * \sa raise_eval_error
+ */
+static VALUE
+rescue_callback(int state, const char *fmt, ...)
+{
+    VALUE err = rb_errinfo();
+    if (rb_obj_is_kind_of(err, rb_eException)) {
+        VALUE msg = rb_protect(rubyjsonnet_format_exception, rb_errinfo(), NULL);
+        if (msg == Qnil) {
+            va_list ap;
+            va_start(ap, fmt);
+            msg = rb_vsprintf(fmt, ap);
+            va_end(ap);
+        }
+        rb_set_errinfo(Qnil);
+        return msg;
+    }
+
+    /*
+     * Other types of global escape.
+     * Here, we'll report the state as an evaluation error to let
+     * the Jsonnet VM clean up its internal resources.
+     * But we'll translate the error into an non-exception global escape
+     * in Ruby again in raise_eval_error().
+     */
+    return rb_sprintf("%s%d%s", RUBYJSONNET_GLOBAL_ESCAPE_MAGIC, state, RUBYJSONNET_GLOBAL_ESCAPE_MAGIC);
+}
+
+/*
+ * Tries to extract a jump tag from a string representation encoded by
+ * rescue_callback.
+ * @retval zero if \a exc_mesg is not such a string representation.
+ * @retval non-zero the extracted tag
+ */
+int
+rubyjsonnet_jump_tag(const char *exc_mesg)
+{
+#define JSONNET_RUNTIME_ERROR_PREFIX "RUNTIME ERROR: "
+    if (strncmp(exc_mesg, JSONNET_RUNTIME_ERROR_PREFIX, strlen(JSONNET_RUNTIME_ERROR_PREFIX))) {
+        return 0;
+    }
+    const char *const tag = strstr(exc_mesg + strlen(JSONNET_RUNTIME_ERROR_PREFIX), RUBYJSONNET_GLOBAL_ESCAPE_MAGIC);
+    if (tag) {
+        const char *const body = tag + strlen(RUBYJSONNET_GLOBAL_ESCAPE_MAGIC);
+        char *last;
+        long state = strtol(body, &last, 10);
+        if (!strncmp(last, RUBYJSONNET_GLOBAL_ESCAPE_MAGIC, strlen(RUBYJSONNET_GLOBAL_ESCAPE_MAGIC)) &&
+                INT_MIN <= state && state <= INT_MAX) {
+            return (int)state;
+        }
+    }
+    return 0;
+}
+
 static char *
 import_callback_entrypoint(void *ctx, const char *base, const char *rel, char **found_here, int *success)
 {
@@ -39,12 +110,8 @@ import_callback_entrypoint(void *ctx, const char *base, const char *rel, char **
     rb_ary_free(args);
 
     if (state) {
-        VALUE msg = rb_protect(rubyjsonnet_format_exception, rb_errinfo(), 0);
-        if (msg == Qnil) {
-            msg = rb_sprintf("cannot import %s from %s", rel, base);
-        }
+        VALUE msg = rescue_callback(state, "cannot import %s from %s", rel, base);
         *success = 0;
-        rb_set_errinfo(Qnil);
         return rubyjsonnet_str_to_cstr(vm->vm, msg);
     }
 
@@ -89,7 +156,7 @@ native_callback_entrypoint(void *data, const struct JsonnetJsonValue *const *arg
     long i;
     int state = 0;
 
-    struct native_callback_ctx *ctx = (struct native_callback_ctx *)data;
+    struct native_callback_ctx *const ctx = (struct native_callback_ctx *)data;
     struct JsonnetVm *const vm = rubyjsonnet_obj_to_vm(ctx->vm)->vm;
     VALUE result, args = rb_ary_tmp_new(ctx->arity + 1);
 
@@ -103,12 +170,7 @@ native_callback_entrypoint(void *data, const struct JsonnetJsonValue *const *arg
     rb_ary_free(args);
 
     if (state) {
-        VALUE msg = rb_protect(rubyjsonnet_format_exception, rb_errinfo(), 0);
-        if (msg == Qnil) {
-            msg = rb_sprintf("something wrong in %+"PRIsVALUE, ctx->callback);
-        }
-        rb_set_errinfo(Qnil);
-
+        VALUE msg = rescue_callback(state, "something wrong in %"PRIsVALUE, ctx->callback);
         *success = 0;
         return rubyjsonnet_obj_to_json(vm, msg, &state);
     }
