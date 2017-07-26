@@ -325,6 +325,21 @@ class TestVM < Test::Unit::TestCase
     end
   end
 
+  test "Jsonnet::VM#handle_import is safe on throw" do
+    [
+      proc   {|rel, base| throw :dummy },
+      lambda {|rel, base| throw :dummy },
+    ].each do |prc|
+      vm = Jsonnet::VM.new
+      vm.handle_import(&prc)
+
+      catch(:dummy) {
+        vm.evaluate('import "a.jsonnet"')
+        flunk "never reach here"
+      }
+    end
+  end
+
   test "Jsonnet::VM#jpath_add adds a library search path" do
     vm = Jsonnet::VM.new
     snippet = "(import 'jpath.libsonnet') {b: 2}"
@@ -441,6 +456,21 @@ class TestVM < Test::Unit::TestCase
       end
     ensure
       assert_equal bodies.size, num_eval
+    end
+  end
+
+  test "Jsonnet::VM#define_function is safe on throw" do
+    [
+      proc   {|x| throw :dummy },
+      lambda {|x| throw :dummy },
+    ].each do |prc|
+      vm = Jsonnet::VM.new
+      vm.define_function(:myFunc, prc)
+
+      catch(:dummy) {
+        vm.evaluate('std.native("myFunc")(1.234)')
+        flunk "never reach here"
+      }
     end
   end
 

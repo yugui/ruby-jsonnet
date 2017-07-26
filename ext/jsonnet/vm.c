@@ -287,11 +287,23 @@ rubyjsonnet_init_vm(VALUE mJsonnet)
  * @param[in] msg must be a NUL-terminated string returned by \c vm.
  * @return never returns
  * @throw EvaluationError
+ * @sa rescue_callback
  */
 static void
 raise_eval_error(struct JsonnetVm *vm, char *msg, rb_encoding *enc)
 {
-    VALUE ex = rb_exc_new3(eEvaluationError, rb_enc_str_new_cstr(msg, enc));
+    VALUE ex;
+    const int state = rubyjsonnet_jump_tag(msg);
+    if (state) {
+        /*
+         * This is not actually an exception but another type of long jump
+         * with the state, temporarily caught by rescue_callback().
+         */
+        jsonnet_realloc(vm, msg, 0);
+        rb_jump_tag(state);
+    }
+
+    ex = rb_exc_new3(eEvaluationError, rb_enc_str_new_cstr(msg, enc));
     jsonnet_realloc(vm, msg, 0);
     rb_exc_raise(ex);
 }
