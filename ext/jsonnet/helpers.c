@@ -1,8 +1,8 @@
 #include <string.h>
 
+#include <libjsonnet.h>
 #include <ruby/ruby.h>
 #include <ruby/encoding.h>
-#include <libjsonnet.h>
 
 #include "ruby_jsonnet.h"
 
@@ -26,10 +26,8 @@ rubyjsonnet_assert_asciicompat(VALUE str)
 {
     rb_encoding *enc = rb_enc_get(str);
     if (!rb_enc_asciicompat(enc)) {
-        rb_raise(
-            eUnsupportedEncodingError,
-            "jsonnet encoding must be ASCII-compatible but got %s",
-            rb_enc_name(enc));
+	rb_raise(eUnsupportedEncodingError, "jsonnet encoding must be ASCII-compatible but got %s",
+		 rb_enc_name(enc));
     }
     return enc;
 }
@@ -56,13 +54,13 @@ rubyjsonnet_format_exception(VALUE exc)
     VALUE name = rb_class_name(rb_obj_class(exc));
     VALUE msg = rb_funcall(exc, id_message, 0);
     if (RB_TYPE_P(name, RUBY_T_STRING) && rb_str_strlen(name)) {
-        if (RB_TYPE_P(msg, RUBY_T_STRING) && rb_str_strlen(msg)) {
-           return rb_str_concat(rb_str_cat_cstr(name, " : "), msg);
-        } else {
-           return name;
-        }
+	if (RB_TYPE_P(msg, RUBY_T_STRING) && rb_str_strlen(msg)) {
+	    return rb_str_concat(rb_str_cat_cstr(name, " : "), msg);
+	} else {
+	    return name;
+	}
     } else if (RB_TYPE_P(msg, RUBY_T_STRING) && rb_str_strlen(msg)) {
-        return msg;
+	return msg;
     }
     return Qnil;
 }
@@ -72,5 +70,5 @@ rubyjsonnet_init_helpers(VALUE mJsonnet)
 {
     id_message = rb_intern("message");
     eUnsupportedEncodingError =
-        rb_define_class_under(mJsonnet, "UnsupportedEncodingError", rb_eEncodingError);
+	rb_define_class_under(mJsonnet, "UnsupportedEncodingError", rb_eEncodingError);
 }

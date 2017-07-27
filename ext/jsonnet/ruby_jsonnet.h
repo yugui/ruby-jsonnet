@@ -17,8 +17,8 @@ struct jsonnet_vm_wrap {
 
     VALUE import_callback;
     struct {
-        long len;
-        struct native_callback_ctx **contexts;
+	long len;
+	struct native_callback_ctx **contexts;
     } native_callbacks;
 };
 
@@ -28,7 +28,7 @@ void rubyjsonnet_init_helpers(VALUE mod);
 
 struct jsonnet_vm_wrap *rubyjsonnet_obj_to_vm(VALUE vm);
 
-VALUE rubyjsonnet_json_to_obj(struct JsonnetVm *vm, const struct JsonnetJsonValue* value);
+VALUE rubyjsonnet_json_to_obj(struct JsonnetVm *vm, const struct JsonnetJsonValue *value);
 struct JsonnetJsonValue *rubyjsonnet_obj_to_json(struct JsonnetVm *vm, VALUE obj, int *success);
 
 rb_encoding *rubyjsonnet_assert_asciicompat(VALUE str);
@@ -36,4 +36,4 @@ char *rubyjsonnet_str_to_cstr(struct JsonnetVm *vm, VALUE str);
 VALUE rubyjsonnet_format_exception(VALUE exc);
 int rubyjsonnet_jump_tag(const char *exc_mesg);
 
-#endif  /* RUBY_JSONNET_RUBY_JSONNET_H_ */
+#endif /* RUBY_JSONNET_RUBY_JSONNET_H_ */

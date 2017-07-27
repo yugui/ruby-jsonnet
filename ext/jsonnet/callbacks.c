@@ -1,11 +1,11 @@
 #include <string.h>
 
-#include <ruby/ruby.h>
 #include <libjsonnet.h>
+#include <ruby/ruby.h>
 
 #include "ruby_jsonnet.h"
 
-/* Magic prefix which distinguishes Ruby-level non-exception global escapes 
+/* Magic prefix which distinguishes Ruby-level non-exception global escapes
  * from other errors in Jsonnet.
  * Any other errors in Jsonnet evaluation cannot contain this fragment of message.
  */
@@ -27,7 +27,7 @@ invoke_callback(VALUE args)
 {
     long len = RARRAY_LEN(args);
     VALUE callback = rb_ary_entry(args, 0);
-    return rb_funcall2(callback, id_call, len-1, RARRAY_PTR(args)+1);
+    return rb_funcall2(callback, id_call, len - 1, RARRAY_PTR(args) + 1);
 }
 
 /*
@@ -46,15 +46,15 @@ rescue_callback(int state, const char *fmt, ...)
 {
     VALUE err = rb_errinfo();
     if (rb_obj_is_kind_of(err, rb_eException)) {
-        VALUE msg = rb_protect(rubyjsonnet_format_exception, rb_errinfo(), NULL);
-        if (msg == Qnil) {
-            va_list ap;
-            va_start(ap, fmt);
-            msg = rb_vsprintf(fmt, ap);
-            va_end(ap);
-        }
-        rb_set_errinfo(Qnil);
-        return msg;
+	VALUE msg = rb_protect(rubyjsonnet_format_exception, rb_errinfo(), NULL);
+	if (msg == Qnil) {
+	    va_list ap;
+	    va_start(ap, fmt);
+	    msg = rb_vsprintf(fmt, ap);
+	    va_end(ap);
+	}
+	rb_set_errinfo(Qnil);
+	return msg;
     }
 
     /*
@@ -64,7 +64,8 @@ rescue_callback(int state, const char *fmt, ...)
      * But we'll translate the error into an non-exception global escape
      * in Ruby again in raise_eval_error().
      */
-    return rb_sprintf("%s%d%s", RUBYJSONNET_GLOBAL_ESCAPE_MAGIC, state, RUBYJSONNET_GLOBAL_ESCAPE_MAGIC);
+    return rb_sprintf("%s%d%s", RUBYJSONNET_GLOBAL_ESCAPE_MAGIC, state,
+		      RUBYJSONNET_GLOBAL_ESCAPE_MAGIC);
 }
 
 /*
@@ -76,27 +77,30 @@ rescue_callback(int state, const char *fmt, ...)
 int
 rubyjsonnet_jump_tag(const char *exc_mesg)
 {
+    const char *tag;
 #define JSONNET_RUNTIME_ERROR_PREFIX "RUNTIME ERROR: "
     if (strncmp(exc_mesg, JSONNET_RUNTIME_ERROR_PREFIX, strlen(JSONNET_RUNTIME_ERROR_PREFIX))) {
-        return 0;
+	return 0;
     }
-    const char *const tag = strstr(exc_mesg + strlen(JSONNET_RUNTIME_ERROR_PREFIX), RUBYJSONNET_GLOBAL_ESCAPE_MAGIC);
+    tag = strstr(exc_mesg + strlen(JSONNET_RUNTIME_ERROR_PREFIX), RUBYJSONNET_GLOBAL_ESCAPE_MAGIC);
     if (tag) {
-        const char *const body = tag + strlen(RUBYJSONNET_GLOBAL_ESCAPE_MAGIC);
-        char *last;
-        long state = strtol(body, &last, 10);
-        if (!strncmp(last, RUBYJSONNET_GLOBAL_ESCAPE_MAGIC, strlen(RUBYJSONNET_GLOBAL_ESCAPE_MAGIC)) &&
-                INT_MIN <= state && state <= INT_MAX) {
-            return (int)state;
-        }
+	const char *const body = tag + strlen(RUBYJSONNET_GLOBAL_ESCAPE_MAGIC);
+	char *last;
+	long state = strtol(body, &last, 10);
+	if (!strncmp(last, RUBYJSONNET_GLOBAL_ESCAPE_MAGIC,
+		     strlen(RUBYJSONNET_GLOBAL_ESCAPE_MAGIC)) &&
+	    INT_MIN <= state && state <= INT_MAX) {
+	    return (int)state;
+	}
     }
     return 0;
 }
 
 static char *
-import_callback_entrypoint(void *ctx, const char *base, const char *rel, char **found_here, int *success)
+import_callback_entrypoint(void *ctx, const char *base, const char *rel, char **found_here,
+			   int *success)
 {
-    struct jsonnet_vm_wrap *const vm = (struct jsonnet_vm_wrap*)ctx;
+    struct jsonnet_vm_wrap *const vm = (struct jsonnet_vm_wrap *)ctx;
     int state;
     VALUE result, args;
 
@@ -110,9 +114,9 @@ import_callback_entrypoint(void *ctx, const char *base, const char *rel, char **
     rb_ary_free(args);
 
     if (state) {
-        VALUE msg = rescue_callback(state, "cannot import %s from %s", rel, base);
-        *success = 0;
-        return rubyjsonnet_str_to_cstr(vm->vm, msg);
+	VALUE msg = rescue_callback(state, "cannot import %s from %s", rel, base);
+	*success = 0;
+	return rubyjsonnet_str_to_cstr(vm->vm, msg);
     }
 
     result = rb_Array(result);
@@ -143,7 +147,8 @@ vm_set_import_callback(VALUE self, VALUE callback)
 }
 
 /**
- * Generic entrypoint of native callbacks which adapts callable objects in Ruby to \c JsonnetNativeCallback.
+ * Generic entrypoint of native callbacks which adapts callable objects in Ruby to \c
+ * JsonnetNativeCallback.
  *
  * @param[in] data pointer to a {\c struct native_callback_ctx}
  * @param[in] argv NULL-terminated array of arguments
@@ -162,7 +167,7 @@ native_callback_entrypoint(void *data, const struct JsonnetJsonValue *const *arg
 
     rb_ary_push(args, ctx->callback);
     for (i = 0; i < ctx->arity; ++i) {
-        rb_ary_push(args, rubyjsonnet_json_to_obj(vm, argv[i]));
+	rb_ary_push(args, rubyjsonnet_json_to_obj(vm, argv[i]));
     }
 
     result = rb_protect(invoke_callback, args, &state);
@@ -170,9 +175,9 @@ native_callback_entrypoint(void *data, const struct JsonnetJsonValue *const *arg
     rb_ary_free(args);
 
     if (state) {
-        VALUE msg = rescue_callback(state, "something wrong in %"PRIsVALUE, ctx->callback);
-        *success = 0;
-        return rubyjsonnet_obj_to_json(vm, msg, &state);
+	VALUE msg = rescue_callback(state, "something wrong in %" PRIsVALUE, ctx->callback);
+	*success = 0;
+	return rubyjsonnet_obj_to_json(vm, msg, &state);
     }
 
     return rubyjsonnet_obj_to_json(vm, result, success);
@@ -187,9 +192,9 @@ static VALUE
 vm_register_native_callback(VALUE self, VALUE name, VALUE callback, VALUE params)
 {
     struct {
-        volatile VALUE store;
-        long len;
-        const char * *buf;
+	volatile VALUE store;
+	long len;
+	const char **buf;
     } cstr_params;
     struct native_callback_ctx *ctx;
     struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
@@ -200,12 +205,12 @@ vm_register_native_callback(VALUE self, VALUE name, VALUE callback, VALUE params
 
     params = rb_Array(params);
     cstr_params.len = RARRAY_LEN(params);
-    cstr_params.buf = (const char * *)rb_alloc_tmp_buffer(
-            &cstr_params.store, sizeof(const char *const) * (cstr_params.len+1));
+    cstr_params.buf = (const char **)rb_alloc_tmp_buffer(
+	&cstr_params.store, sizeof(const char *const) * (cstr_params.len + 1));
     for (i = 0; i < cstr_params.len; ++i) {
-        const VALUE pname = rb_to_symbol(RARRAY_AREF(params, i));
-        rubyjsonnet_assert_asciicompat(pname);
-        cstr_params.buf[i] = rb_id2name(RB_SYM2ID(pname));
+	const VALUE pname = rb_to_symbol(RARRAY_AREF(params, i));
+	rubyjsonnet_assert_asciicompat(pname);
+	cstr_params.buf[i] = rb_id2name(RB_SYM2ID(pname));
     }
     cstr_params.buf[cstr_params.len] = NULL;
 
@@ -213,13 +218,13 @@ vm_register_native_callback(VALUE self, VALUE name, VALUE callback, VALUE params
     ctx->callback = callback;
     ctx->arity = cstr_params.len;
     ctx->vm = self;
-    jsonnet_native_callback(vm->vm, rb_id2name(RB_SYM2ID(name)),
-            native_callback_entrypoint, ctx, cstr_params.buf);
+    jsonnet_native_callback(vm->vm, rb_id2name(RB_SYM2ID(name)), native_callback_entrypoint, ctx,
+			    cstr_params.buf);
 
     rb_free_tmp_buffer(&cstr_params.store);
 
     RB_REALLOC_N(vm->native_callbacks.contexts, struct native_callback_ctx *,
-            vm->native_callbacks.len+1);
+		 vm->native_callbacks.len + 1);
     vm->native_callbacks.contexts[vm->native_callbacks.len] = ctx;
     vm->native_callbacks.len++;
 
