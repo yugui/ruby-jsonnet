@@ -1,11 +1,11 @@
+#include <libjsonnet.h>
 #include <ruby/ruby.h>
 #include <ruby/intern.h>
-#include <libjsonnet.h>
 
 #include "ruby_jsonnet.h"
 
-static struct JsonnetJsonValue *
-protect_obj_to_json(struct JsonnetVm *vm, VALUE obj, struct JsonnetJsonValue *parent);
+static struct JsonnetJsonValue *protect_obj_to_json(struct JsonnetVm *vm, VALUE obj,
+						    struct JsonnetJsonValue *parent);
 
 /**
  * Converts a Jsonnet JSON value into a Ruby object.
@@ -14,33 +14,33 @@ protect_obj_to_json(struct JsonnetVm *vm, VALUE obj, struct JsonnetJsonValue *pa
  * libjsonnet API.
  */
 VALUE
-rubyjsonnet_json_to_obj(struct JsonnetVm *vm, const struct JsonnetJsonValue* value)
+rubyjsonnet_json_to_obj(struct JsonnetVm *vm, const struct JsonnetJsonValue *value)
 {
     union {
-        const char *str;
-        double num;
+	const char *str;
+	double num;
     } typed_value;
 
     if ((typed_value.str = jsonnet_json_extract_string(vm, value))) {
-        return rb_enc_str_new_cstr(typed_value.str, rb_utf8_encoding());
+	return rb_enc_str_new_cstr(typed_value.str, rb_utf8_encoding());
     }
     if (jsonnet_json_extract_number(vm, value, &typed_value.num)) {
-        return DBL2NUM(typed_value.num);
+	return DBL2NUM(typed_value.num);
     }
 
     switch (jsonnet_json_extract_bool(vm, value)) {
-    case 0:
-        return Qfalse;
-    case 1:
-        return Qtrue;
-    case 2:
-        break;
-    default:
-        /* never happens */
-        rb_raise(rb_eRuntimeError, "unrecognized json bool value");
+	case 0:
+	    return Qfalse;
+	case 1:
+	    return Qtrue;
+	case 2:
+	    break;
+	default:
+	    /* never happens */
+	    rb_raise(rb_eRuntimeError, "unrecognized json bool value");
     }
     if (jsonnet_json_extract_null(vm, value)) {
-        return Qnil;
+	return Qnil;
     }
 
     /* TODO: support arrays and objects when they get accessible */
@@ -67,9 +67,8 @@ ary_to_json(struct JsonnetVm *vm, VALUE ary)
 
     int i;
     for (i = 0; i < RARRAY_LEN(ary); ++i) {
-        struct JsonnetJsonValue *const v =
-            protect_obj_to_json(vm, RARRAY_AREF(ary, i), json_array);
-        jsonnet_json_array_append(vm, json_array, v);
+	struct JsonnetJsonValue *const v = protect_obj_to_json(vm, RARRAY_AREF(ary, i), json_array);
+	jsonnet_json_array_append(vm, json_array, v);
     }
     return json_array;
 }
@@ -82,15 +81,13 @@ struct hash_to_json_params {
 static int
 hash_item_to_json(VALUE key, VALUE value, VALUE paramsval)
 {
-    const struct hash_to_json_params *const params =
-        (const struct hash_to_json_params*)paramsval;
+    const struct hash_to_json_params *const params = (const struct hash_to_json_params *)paramsval;
 
     StringValue(key);
     rubyjsonnet_assert_asciicompat(key);
 
-    jsonnet_json_object_append(params->vm, params->obj,
-            StringValueCStr(key), 
-            protect_obj_to_json(params->vm, value, params->obj));
+    jsonnet_json_object_append(params->vm, params->obj, StringValueCStr(key),
+			       protect_obj_to_json(params->vm, value, params->obj));
 
     return ST_CONTINUE;
 }
@@ -115,32 +112,32 @@ obj_to_json(struct JsonnetVm *vm, VALUE obj)
     VALUE converted;
 
     switch (obj) {
-    case Qnil:
-        return jsonnet_json_make_null(vm);
-    case Qtrue:
-        return jsonnet_json_make_bool(vm, 1);
-    case Qfalse:
-        return jsonnet_json_make_bool(vm, 0);
+	case Qnil:
+	    return jsonnet_json_make_null(vm);
+	case Qtrue:
+	    return jsonnet_json_make_bool(vm, 1);
+	case Qfalse:
+	    return jsonnet_json_make_bool(vm, 0);
     }
 
     converted = rb_check_string_type(obj);
     if (converted != Qnil) {
-        return string_to_json(vm, converted);
+	return string_to_json(vm, converted);
     }
 
     converted = rb_check_to_float(obj);
     if (converted != Qnil) {
-        return num_to_json(vm, converted);
+	return num_to_json(vm, converted);
     }
 
     converted = rb_check_array_type(obj);
     if (converted != Qnil) {
-        return ary_to_json(vm, converted);
+	return ary_to_json(vm, converted);
     }
 
     converted = rb_check_hash_type(obj);
     if (converted != Qnil) {
-        return hash_to_json(vm, converted);
+	return hash_to_json(vm, converted);
     }
 
     converted = rb_any_to_s(obj);
@@ -155,8 +152,7 @@ struct protect_args {
 static VALUE
 protect_obj_to_json_block(VALUE paramsval)
 {
-    const struct protect_args *const params =
-        (const struct protect_args*)paramsval;
+    const struct protect_args *const params = (const struct protect_args *)paramsval;
     return (VALUE)obj_to_json(params->vm, params->obj);
 }
 
@@ -177,7 +173,7 @@ protect_obj_to_json(struct JsonnetVm *vm, VALUE obj, struct JsonnetJsonValue *pa
 
     VALUE result = rb_protect(protect_obj_to_json_block, (VALUE)&args, &state);
     if (!state) {
-        return (struct JsonnetJsonValue*)result;
+	return (struct JsonnetJsonValue *)result;
     }
 
     jsonnet_json_destroy(vm, parent);
@@ -200,11 +196,11 @@ rubyjsonnet_obj_to_json(struct JsonnetVm *vm, VALUE obj, int *success)
     const struct protect_args args = {vm, obj};
     VALUE result = rb_protect(protect_obj_to_json_block, (VALUE)&args, &state);
     if (state) {
-        const VALUE msg = rubyjsonnet_format_exception(rb_errinfo());
-        rb_set_errinfo(Qnil);
-        *success = 0;
-        return string_to_json(vm, msg);
+	const VALUE msg = rubyjsonnet_format_exception(rb_errinfo());
+	rb_set_errinfo(Qnil);
+	*success = 0;
+	return string_to_json(vm, msg);
     }
     *success = 1;
-    return (struct JsonnetJsonValue*)result;
+    return (struct JsonnetJsonValue *)result;
 }

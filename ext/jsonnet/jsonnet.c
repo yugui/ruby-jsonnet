@@ -1,6 +1,6 @@
+#include <libjsonnet.h>
 #include <ruby/ruby.h>
 #include <ruby/encoding.h>
-#include <libjsonnet.h>
 
 #include "ruby_jsonnet.h"
 

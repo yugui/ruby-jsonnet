@@ -1,6 +1,6 @@
+#include <libjsonnet.h>
 #include <ruby/ruby.h>
 #include <ruby/intern.h>
-#include <libjsonnet.h>
 
 #include "ruby_jsonnet.h"
 
@@ -31,23 +31,23 @@ static void vm_mark(void *ptr);
 const rb_data_type_t jsonnet_vm_type = {
     "JsonnetVm",
     {
-      /* dmark = */ vm_mark,
-      /* dfree = */ vm_free,
-      /* dsize = */ 0,
+	/* dmark = */ vm_mark,
+	/* dfree = */ vm_free,
+	/* dsize = */ 0,
     },
     /* parent = */ 0,
     /* data = */ 0,
-    /* flags = */ RUBY_TYPED_FREE_IMMEDIATELY
+    /* flags = */ RUBY_TYPED_FREE_IMMEDIATELY,
 };
 
 struct jsonnet_vm_wrap *
-rubyjsonnet_obj_to_vm(VALUE wrap) {
+rubyjsonnet_obj_to_vm(VALUE wrap)
+{
     struct jsonnet_vm_wrap *vm;
     TypedData_Get_Struct(wrap, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
 
     return vm;
 }
-
 
 static VALUE
 vm_s_new(int argc, const VALUE *argv, VALUE klass)
@@ -67,14 +67,14 @@ static void
 vm_free(void *ptr)
 {
     int i;
-    struct jsonnet_vm_wrap *vm = (struct jsonnet_vm_wrap*)ptr;
+    struct jsonnet_vm_wrap *vm = (struct jsonnet_vm_wrap *)ptr;
     jsonnet_destroy(vm->vm);
 
     for (i = 0; i < vm->native_callbacks.len; ++i) {
-        struct native_callback_ctx *ctx = vm->native_callbacks.contexts[i];
-        RB_REALLOC_N(ctx, struct native_callback_ctx, 0);
+	struct native_callback_ctx *ctx = vm->native_callbacks.contexts[i];
+	RB_REALLOC_N(ctx, struct native_callback_ctx, 0);
     }
-    RB_REALLOC_N(vm->native_callbacks.contexts, struct native_callback_ctx*, 0);
+    RB_REALLOC_N(vm->native_callbacks.contexts, struct native_callback_ctx *, 0);
 
     RB_REALLOC_N(vm, struct jsonnet_vm_wrap, 0);
 }
@@ -83,11 +83,11 @@ static void
 vm_mark(void *ptr)
 {
     int i;
-    struct jsonnet_vm_wrap *vm = (struct jsonnet_vm_wrap*)ptr;
+    struct jsonnet_vm_wrap *vm = (struct jsonnet_vm_wrap *)ptr;
 
     rb_gc_mark(vm->import_callback);
     for (i = 0; i < vm->native_callbacks.len; ++i) {
-        rb_gc_mark(vm->native_callbacks.contexts[i]->callback);
+	rb_gc_mark(vm->native_callbacks.contexts[i]->callback);
     }
 }
 
@@ -101,14 +101,13 @@ vm_evaluate_file(VALUE self, VALUE fname, VALUE encoding, VALUE multi_p)
 
     FilePathValue(fname);
     if (RTEST(multi_p)) {
-        result = jsonnet_evaluate_file_multi(vm->vm, StringValueCStr(fname), &error);
-    }
-    else {
-        result = jsonnet_evaluate_file(vm->vm, StringValueCStr(fname), &error);
+	result = jsonnet_evaluate_file_multi(vm->vm, StringValueCStr(fname), &error);
+    } else {
+	result = jsonnet_evaluate_file(vm->vm, StringValueCStr(fname), &error);
     }
 
     if (error) {
-        raise_eval_error(vm->vm, result, rb_enc_get(fname));
+	raise_eval_error(vm->vm, result, rb_enc_get(fname));
     }
     return RTEST(multi_p) ? fileset_new(vm->vm, result, enc) : str_new_json(vm->vm, result, enc);
 }
@@ -123,30 +122,27 @@ vm_evaluate(VALUE self, VALUE snippet, VALUE fname, VALUE multi_p)
     rb_encoding *enc = rubyjsonnet_assert_asciicompat(StringValue(snippet));
     FilePathValue(fname);
     if (RTEST(multi_p)) {
-        result = jsonnet_evaluate_snippet_multi(
-                vm->vm,
-                StringValueCStr(fname), StringValueCStr(snippet), &error);
-    }
-    else {
-        result = jsonnet_evaluate_snippet(
-                vm->vm,
-                StringValueCStr(fname), StringValueCStr(snippet), &error);
+	result = jsonnet_evaluate_snippet_multi(vm->vm, StringValueCStr(fname),
+						StringValueCStr(snippet), &error);
+    } else {
+	result = jsonnet_evaluate_snippet(vm->vm, StringValueCStr(fname), StringValueCStr(snippet),
+					  &error);
     }
 
     if (error) {
-        raise_eval_error(vm->vm, result, rb_enc_get(fname));
+	raise_eval_error(vm->vm, result, rb_enc_get(fname));
     }
     return RTEST(multi_p) ? fileset_new(vm->vm, result, enc) : str_new_json(vm->vm, result, enc);
 }
 
-#define vm_bind_variable(type, self, key, val) \
-    do { \
-        struct jsonnet_vm_wrap *vm; \
-        \
-        rubyjsonnet_assert_asciicompat(StringValue(key)); \
-        rubyjsonnet_assert_asciicompat(StringValue(val)); \
-        TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm); \
-        jsonnet_##type(vm->vm, StringValueCStr(key), StringValueCStr(val)); \
+#define vm_bind_variable(type, self, key, val)                                    \
+    do {                                                                          \
+	struct jsonnet_vm_wrap *vm;                                               \
+                                                                                  \
+	rubyjsonnet_assert_asciicompat(StringValue(key));                         \
+	rubyjsonnet_assert_asciicompat(StringValue(val));                         \
+	TypedData_Get_Struct(self, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm); \
+	jsonnet_##type(vm->vm, StringValueCStr(key), StringValueCStr(val));       \
     } while (0)
 
 /*
@@ -207,9 +203,9 @@ vm_jpath_add_m(int argc, const VALUE *argv, VALUE self)
     struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
 
     for (i = 0; i < argc; ++i) {
-        VALUE jpath = argv[i];
-        FilePathValue(jpath);
-        jsonnet_jpath_add(vm->vm, StringValueCStr(jpath));
+	VALUE jpath = argv[i];
+	FilePathValue(jpath);
+	jsonnet_jpath_add(vm->vm, StringValueCStr(jpath));
     }
     return Qnil;
 }
@@ -239,7 +235,8 @@ vm_set_gc_growth_trigger(VALUE self, VALUE val)
 }
 
 /*
- * Let #evaluate and #evaluate_file return a raw String instead of JSON-encoded string if val is true
+ * Let #evaluate and #evaluate_file return a raw String instead of JSON-encoded string if val is
+ * true
  * @param [Boolean] val
  */
 static VALUE
@@ -295,12 +292,12 @@ raise_eval_error(struct JsonnetVm *vm, char *msg, rb_encoding *enc)
     VALUE ex;
     const int state = rubyjsonnet_jump_tag(msg);
     if (state) {
-        /*
-         * This is not actually an exception but another type of long jump
-         * with the state, temporarily caught by rescue_callback().
-         */
-        jsonnet_realloc(vm, msg, 0);
-        rb_jump_tag(state);
+	/*
+	 * This is not actually an exception but another type of long jump
+	 * with the state, temporarily caught by rescue_callback().
+	 */
+	jsonnet_realloc(vm, msg, 0);
+	rb_jump_tag(state);
     }
 
     ex = rb_exc_new3(eEvaluationError, rb_enc_str_new_cstr(msg, enc));
@@ -338,17 +335,16 @@ fileset_new(struct JsonnetVm *vm, char *buf, rb_encoding *enc)
 {
     VALUE fileset = rb_hash_new();
     char *ptr, *json;
-    for (ptr = buf; *ptr; ptr = json + strlen(json)+1) {
-        json = ptr + strlen(ptr) + 1;
-        if (!*json) {
-            VALUE ex = rb_exc_new3(
-                    eEvaluationError,
-                    rb_enc_sprintf(enc, "output file %s without body", ptr));
-            jsonnet_realloc(vm, buf, 0);
-            rb_exc_raise(ex);
-        }
+    for (ptr = buf; *ptr; ptr = json + strlen(json) + 1) {
+	json = ptr + strlen(ptr) + 1;
+	if (!*json) {
+	    VALUE ex = rb_exc_new3(eEvaluationError,
+				   rb_enc_sprintf(enc, "output file %s without body", ptr));
+	    jsonnet_realloc(vm, buf, 0);
+	    rb_exc_raise(ex);
+	}
 
-        rb_hash_aset(fileset, rb_enc_str_new_cstr(ptr, enc), rb_enc_str_new_cstr(json, enc));
+	rb_hash_aset(fileset, rb_enc_str_new_cstr(ptr, enc), rb_enc_str_new_cstr(json, enc));
     }
     jsonnet_realloc(vm, buf, 0);
     return fileset;
