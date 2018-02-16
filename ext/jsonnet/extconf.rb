@@ -10,7 +10,6 @@ dir_config('jsonnet')
 unless using_system_libraries?
   message "Building jsonnet using packaged libraries.\n"
   require 'rubygems'
-  gem 'mini_portile2', '~> 2.2.0'
   require 'mini_portile2'
   message "Using mini_portile version #{MiniPortile::VERSION}\n"
 
