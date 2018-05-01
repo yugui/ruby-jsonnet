@@ -5,12 +5,11 @@ script: bundle exec rake test
 matrix:
   include:
   - os: linux
-    rvm: 2.3.4
+    rvm: 2.4.4
   - os: osx
-    rvm: 2.3.4
+    rvm: 2.4.4
   - os: linux
-    rvm: 2.4.0
+    rvm: 2.5.1
   - os: osx
-    rvm: 2.4.0
+    rvm: 2.5.1
   fast_finish: true
-
