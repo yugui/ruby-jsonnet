@@ -12,4 +12,12 @@ matrix:
     rvm: 2.5.1
   - os: osx
     rvm: 2.5.1
+  - os: linux
+    rvm: 2.6.6
+  - os: osx
+    rvm: 2.6.6
+  - os: linux
+    rvm: 2.7.1
+  - os: osx
+    rvm: 2.7.1
   fast_finish: true
