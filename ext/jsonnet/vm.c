@@ -332,7 +332,7 @@ vm_set_fmt_sort_imports(VALUE self, VALUE val)
 }
 
 static VALUE
-vm_set_fmt_file(VALUE self, VALUE fname, VALUE encoding)
+vm_fmt_file(VALUE self, VALUE fname, VALUE encoding)
 {
     int error;
     char *result;
@@ -348,7 +348,7 @@ vm_set_fmt_file(VALUE self, VALUE fname, VALUE encoding)
 }
 
 static VALUE
-vm_set_fmt_snippet(VALUE self, VALUE snippet, VALUE fname)
+vm_fmt_snippet(VALUE self, VALUE snippet, VALUE fname)
 {
     int error;
     char *result;
@@ -388,8 +388,8 @@ rubyjsonnet_init_vm(VALUE mJsonnet)
     rb_define_method(cVM, "fmt_pad_objects=", vm_set_fmt_pad_objects, 1);
     rb_define_method(cVM, "fmt_pretty_field_names=", vm_set_fmt_pretty_field_names, 1);
     rb_define_method(cVM, "fmt_sort_imports=", vm_set_fmt_sort_imports, 1);
-    rb_define_method(cVM, "fmt_file", vm_set_fmt_file, 2);
-    rb_define_method(cVM, "fmt_snippet", vm_set_fmt_snippet, 2);
+    rb_define_method(cVM, "fmt_file", vm_fmt_file, 2);
+    rb_define_method(cVM, "fmt_snippet", vm_fmt_snippet, 2);
 
     rubyjsonnet_init_callbacks(cVM);
 
