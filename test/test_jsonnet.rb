@@ -38,7 +38,7 @@ class TestJsonnet < Test::Unit::TestCase
   private
 
   def example_jsonnet_file
-    example = Tempfile.open("example.jsonnet") do |f|
+    Tempfile.open("example.jsonnet") do |f|
       f.write %<
         local myvar = 1;
         {
