@@ -14,8 +14,8 @@ module Jsonnet
       # @see #evaluate
       def evaluate(snippet, options = {})
         snippet_check = ->(key, value) { key.to_s.match(/^filename|multi$/) }
-        snippet_options = options.select &snippet_check
-        vm_options = options.reject &snippet_check
+        snippet_options = options.select(&snippet_check)
+        vm_options = options.reject(&snippet_check)
         new(vm_options).evaluate(snippet, snippet_options)
       end
 
@@ -30,8 +30,8 @@ module Jsonnet
       # @see #evaluate_file
       def evaluate_file(filename, options = {})
         file_check = ->(key, value) { key.to_s.match(/^encoding|multi$/) }
-        file_options = options.select &file_check
-        vm_options = options.reject &file_check
+        file_options = options.select(&file_check)
+        vm_options = options.reject(&file_check)
         new(vm_options).evaluate_file(filename, file_options)
       end
     end
