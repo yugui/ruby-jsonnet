@@ -512,9 +512,9 @@ local myvar = "myvar";
 
   test "Jsonnet::VM#fmt_string only accepts 'd', 's', or 'l'" do
     vm = Jsonnet::VM.new
-    vm.fmt_string = 'd'
-    vm.fmt_string = 's'
-    vm.fmt_string = 'l'
+    vm.fmt_string = Jsonnet::STRING_STYLE_DOUBLE
+    vm.fmt_string = Jsonnet::STRING_STYLE_SINGLE
+    vm.fmt_string = Jsonnet::STRING_STYLE_LEAVE
     assert_raise(ArgumentError) do
       vm.fmt_string = ''
     end
@@ -531,9 +531,9 @@ local myvar = "myvar";
 
   test "Jsonnet::VM#fmt_comment only accepts 'h', 's', or 'l'" do
     vm = Jsonnet::VM.new
-    vm.fmt_comment = 'h'
-    vm.fmt_comment = 's'
-    vm.fmt_comment = 'l'
+    vm.fmt_comment = Jsonnet::COMMENT_STYLE_HASH
+    vm.fmt_comment = Jsonnet::COMMENT_STYLE_SLASH
+    vm.fmt_comment = Jsonnet::COMMENT_STYLE_LEAVE
     assert_raise(ArgumentError) do
       vm.fmt_comment = ''
     end

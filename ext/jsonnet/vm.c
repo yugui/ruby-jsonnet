@@ -407,6 +407,13 @@ rubyjsonnet_init_vm(VALUE mJsonnet)
     rb_define_method(cVM, "fmt_file", vm_fmt_file, 2);
     rb_define_method(cVM, "fmt_snippet", vm_fmt_snippet, 2);
 
+    rb_define_const(mJsonnet, "STRING_STYLE_DOUBLE", rb_str_new_cstr("d"));
+    rb_define_const(mJsonnet, "STRING_STYLE_SINGLE", rb_str_new_cstr("s"));
+    rb_define_const(mJsonnet, "STRING_STYLE_LEAVE", rb_str_new_cstr("l"));
+    rb_define_const(mJsonnet, "COMMENT_STYLE_HASH", rb_str_new_cstr("h"));
+    rb_define_const(mJsonnet, "COMMENT_STYLE_SLASH", rb_str_new_cstr("s"));
+    rb_define_const(mJsonnet, "COMMENT_STYLE_LEAVE", rb_str_new_cstr("l"));
+
     rubyjsonnet_init_callbacks(cVM);
 
     eEvaluationError = rb_define_class_under(mJsonnet, "EvaluationError", rb_eRuntimeError);
