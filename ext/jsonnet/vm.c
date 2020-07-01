@@ -274,29 +274,45 @@ vm_set_fmt_max_blank_lines(VALUE self, VALUE val)
 }
 
 static VALUE
-vm_set_fmt_string(VALUE self, VALUE val)
+vm_set_fmt_string(VALUE self, VALUE str)
 {
-    char *str;
+    const char *ptr;
     struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
-    str = StringValueCStr(val);
-    if (str[0] == '\0' || str[1] != '\0' || (str[0] != 'd' && str[0] != 's' && str[0] != 'l')) {
-      rb_raise(rb_eArgError, "fmt_string only accepts 'd', 's', or 'l'");
+    StringValue(str);
+    if (RSTRING_LEN(str) != 1) {
+	rb_raise(rb_eArgError, "fmt_string must have a length of 1");
     }
-    jsonnet_fmt_string(vm->vm, str[0]);
-    return val;
+    ptr = RSTRING_PTR(str);
+    switch (*ptr) {
+	case 'd':
+	case 's':
+	case 'l':
+	    jsonnet_fmt_string(vm->vm, *ptr);
+	    return str;
+	default:
+	    rb_raise(rb_eArgError, "fmt_string only accepts 'd', 's', or 'l'");
+    }
 }
 
 static VALUE
-vm_set_fmt_comment(VALUE self, VALUE val)
+vm_set_fmt_comment(VALUE self, VALUE str)
 {
-    char *str;
+    const char *ptr;
     struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
-    str = StringValueCStr(val);
-    if (str[0] == '\0' || str[1] != '\0' || (str[0] != 'h' && str[0] != 's' && str[0] != 'l')) {
-      rb_raise(rb_eArgError, "fmt_comment only accepts 'h', 's', or 'l'");
+    StringValue(str);
+    if (RSTRING_LEN(str) != 1) {
+	rb_raise(rb_eArgError, "fmt_comment must have a length of 1");
     }
-    jsonnet_fmt_comment(vm->vm, str[0]);
-    return val;
+    ptr = RSTRING_PTR(str);
+    switch (*ptr) {
+	case 'h':
+	case 's':
+	case 'l':
+	    jsonnet_fmt_comment(vm->vm, *ptr);
+	    return str;
+	default:
+	    rb_raise(rb_eArgError, "fmt_comment only accepts 'h', 's', or 'l'");
+    }
 }
 
 static VALUE
@@ -342,7 +358,7 @@ vm_fmt_file(VALUE self, VALUE fname, VALUE encoding)
     FilePathValue(fname);
     result = jsonnet_fmt_file(vm->vm, StringValueCStr(fname), &error);
     if (error) {
-      raise_format_error(vm->vm, result, rb_enc_get(fname));
+	raise_format_error(vm->vm, result, rb_enc_get(fname));
     }
     return str_new_json(vm->vm, result, enc);
 }
@@ -358,7 +374,7 @@ vm_fmt_snippet(VALUE self, VALUE snippet, VALUE fname)
     FilePathValue(fname);
     result = jsonnet_fmt_snippet(vm->vm, StringValueCStr(fname), StringValueCStr(snippet), &error);
     if (error) {
-      raise_format_error(vm->vm, result, rb_enc_get(fname));
+	raise_format_error(vm->vm, result, rb_enc_get(fname));
     }
     return str_new_json(vm->vm, result, enc);
 }

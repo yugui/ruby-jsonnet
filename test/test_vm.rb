@@ -524,6 +524,9 @@ local myvar = "myvar";
     assert_raise(ArgumentError) do
       vm.fmt_string = 'ds'
     end
+    assert_raise(TypeError) do
+      vm.fmt_string = 0
+    end
   end
 
   test "Jsonnet::VM#fmt_comment only accepts 'h', 's', or 'l'" do
@@ -539,6 +542,9 @@ local myvar = "myvar";
     end
     assert_raise(ArgumentError) do
       vm.fmt_comment = 'hs'
+    end
+    assert_raise(TypeError) do
+      vm.fmt_comment = 0
     end
   end
 
