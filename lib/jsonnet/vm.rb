@@ -94,8 +94,11 @@ module Jsonnet
     # @yieldparam  [String] rel  a relative or absolute path to the file to be imported
     # @yieldreturn [Array<String>] a pair of the content of the imported file and
     #                              its path.
-    def handle_import
-      self.import_callback = to_method(Proc.new)
+    def handle_import(&block)
+      if block.nil?
+        raise ArgumentError, 'handle_import requires a block'
+      end
+      self.import_callback = to_method(block)
       nil
     end
 
@@ -112,8 +115,11 @@ module Jsonnet
     #   Also all the positional optional parameters of the body are interpreted
     #   as required parameters. And the body cannot have keyword, rest or
     #   keyword rest paramters.
-    def define_function(name, body = nil)
-      body = body ? body.to_proc : Proc.new
+    def define_function(name, body = nil, &block)
+      body = body ? body.to_proc : block
+      if body.nil?
+        raise ArgumentError, 'define_function requires a body argument or a block'
+      end
       params = body.parameters.map.with_index do |(type, name), i|
         raise ArgumentError, "rest or keyword parameters are not allowed: #{type}" \
           unless [:req, :opt].include? type
