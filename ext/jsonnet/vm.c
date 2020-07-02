@@ -386,6 +386,8 @@ rubyjsonnet_init_vm(VALUE mJsonnet)
     rb_define_singleton_method(cVM, "new", vm_s_new, -1);
     rb_define_private_method(cVM, "eval_file", vm_evaluate_file, 3);
     rb_define_private_method(cVM, "eval_snippet", vm_evaluate, 3);
+    rb_define_private_method(cVM, "fmt_file", vm_fmt_file, 2);
+    rb_define_private_method(cVM, "fmt_snippet", vm_fmt_snippet, 2);
     rb_define_method(cVM, "ext_var", vm_ext_var, 2);
     rb_define_method(cVM, "ext_code", vm_ext_code, 2);
     rb_define_method(cVM, "tla_var", vm_tla_var, 2);
@@ -404,8 +406,6 @@ rubyjsonnet_init_vm(VALUE mJsonnet)
     rb_define_method(cVM, "fmt_pad_objects=", vm_set_fmt_pad_objects, 1);
     rb_define_method(cVM, "fmt_pretty_field_names=", vm_set_fmt_pretty_field_names, 1);
     rb_define_method(cVM, "fmt_sort_imports=", vm_set_fmt_sort_imports, 1);
-    rb_define_method(cVM, "fmt_file", vm_fmt_file, 2);
-    rb_define_method(cVM, "fmt_snippet", vm_fmt_snippet, 2);
 
     rb_define_const(mJsonnet, "STRING_STYLE_DOUBLE", rb_str_new_cstr("d"));
     rb_define_const(mJsonnet, "STRING_STYLE_SINGLE", rb_str_new_cstr("s"));
