@@ -39,6 +39,7 @@ unless using_system_libraries?
 
       FileUtils.cp(File.join(work_path, 'libjsonnet.a'), lib_path)
       FileUtils.cp(File.join(work_path, 'include', 'libjsonnet.h'), include_path)
+      FileUtils.cp(File.join(work_path, 'include', 'libjsonnet_fmt.h'), include_path)
     end
   end
 
@@ -57,4 +58,5 @@ end
 
 abort 'libjsonnet.h not found' unless have_header('libjsonnet.h')
 abort 'libjsonnet not found' unless have_library('jsonnet')
+have_header('libjsonnet_fmt.h')
 create_makefile('jsonnet/jsonnet_wrap')

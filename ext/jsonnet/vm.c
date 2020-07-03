@@ -1,4 +1,7 @@
 #include <libjsonnet.h>
+#ifdef HAVE_LIBJSONNET_FMT_H
+# include <libjsonnet_fmt.h>
+#endif
 #include <ruby/ruby.h>
 #include <ruby/intern.h>
 
