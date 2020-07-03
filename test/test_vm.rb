@@ -474,6 +474,96 @@ class TestVM < Test::Unit::TestCase
     end
   end
 
+  test "Jsonnet::VM#format_file formats Jsonnet file" do
+    vm = Jsonnet::VM.new
+    vm.fmt_indent = 4
+    with_example_file(%<
+      local myvar = 1;
+    {
+    "foo": myvar
+    }
+    >) {|fname|
+      result = vm.format_file(fname)
+      assert_equal <<-EOS, result
+local myvar = 1;
+{
+    foo: myvar,
+}
+      EOS
+    }
+  end
+
+  test "Jsonnet::VM#format formats Jsonnet snippet" do
+    vm = Jsonnet::VM.new
+    vm.fmt_string = 'd'
+    result = vm.format(<<-EOS)
+local myvar = 'myvar';
+{
+foo: [myvar,myvar]
+}
+    EOS
+    assert_equal <<-EOS, result
+local myvar = "myvar";
+{
+  foo: [myvar, myvar],
+}
+    EOS
+  end
+
+  test "Jsonnet::VM#fmt_string only accepts 'd', 's', or 'l'" do
+    vm = Jsonnet::VM.new
+    vm.fmt_string = Jsonnet::STRING_STYLE_DOUBLE
+    vm.fmt_string = Jsonnet::STRING_STYLE_SINGLE
+    vm.fmt_string = Jsonnet::STRING_STYLE_LEAVE
+    assert_raise(ArgumentError) do
+      vm.fmt_string = ''
+    end
+    assert_raise(ArgumentError) do
+      vm.fmt_string = 'a'
+    end
+    assert_raise(ArgumentError) do
+      vm.fmt_string = 'ds'
+    end
+    assert_raise(TypeError) do
+      vm.fmt_string = 0
+    end
+  end
+
+  test "Jsonnet::VM#fmt_comment only accepts 'h', 's', or 'l'" do
+    vm = Jsonnet::VM.new
+    vm.fmt_comment = Jsonnet::COMMENT_STYLE_HASH
+    vm.fmt_comment = Jsonnet::COMMENT_STYLE_SLASH
+    vm.fmt_comment = Jsonnet::COMMENT_STYLE_LEAVE
+    assert_raise(ArgumentError) do
+      vm.fmt_comment = ''
+    end
+    assert_raise(ArgumentError) do
+      vm.fmt_comment = 'a'
+    end
+    assert_raise(ArgumentError) do
+      vm.fmt_comment = 'hs'
+    end
+    assert_raise(TypeError) do
+      vm.fmt_comment = 0
+    end
+  end
+
+  test "Jsonnet::VM#fmt_file raises FormatError on error" do
+    vm = Jsonnet::VM.new
+    with_example_file('{foo: }') do |fname|
+      assert_raise(Jsonnet::FormatError) do
+        vm.format_file(fname)
+      end
+    end
+  end
+
+  test "Jsonnet::VM#fmt_snippet raises FormatError on error" do
+    vm = Jsonnet::VM.new
+    assert_raise(Jsonnet::FormatError) do
+      vm.format('{foo: }')
+    end
+  end
+
   private
   def with_example_file(content)
     Tempfile.open("example.jsonnet") {|f|

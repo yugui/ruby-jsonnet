@@ -89,6 +89,28 @@ module Jsonnet
     end
 
     ##
+    # Format Jsonnet file.
+    #
+    # @param [String] filename filename of a Jsonnet source file.
+    # @return [String] a formatted Jsonnet representation
+    # @raise [FormatError] raised when the formatting results an error.
+    def format_file(filename, encoding: Encoding.default_external)
+      fmt_file(filename, encoding)
+    end
+
+    ##
+    # Format Jsonnet snippet.
+    #
+    # @param [String] jsonnet Jsonnet source string. Must be encoded in ASCII-compatible encoding.
+    # @param [String] filename filename of the source. Used in stacktrace.
+    # @return [String] a formatted Jsonnet representation
+    # @raise [FormatError] raised when the formatting results an error.
+    # @raise [UnsupportedEncodingError] raised when the encoding of jsonnt is not ASCII-compatible.
+    def format(jsonnet, filename: "(jsonnet)")
+      fmt_snippet(jsonnet, filename)
+    end
+
+    ##
     # Lets the given block handle "import" expression of Jsonnet.
     # @yieldparam  [String] base base path to resolve "rel" from.
     # @yieldparam  [String] rel  a relative or absolute path to the file to be imported

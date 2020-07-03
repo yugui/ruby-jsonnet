@@ -20,8 +20,10 @@ static VALUE cVM;
  * Raised on evaluation errors in a Jsonnet VM.
  */
 static VALUE eEvaluationError;
+static VALUE eFormatError;
 
 static void raise_eval_error(struct JsonnetVm *vm, char *msg, rb_encoding *enc);
+static void raise_format_error(struct JsonnetVm *vm, char *msg, rb_encoding *enc);
 static VALUE str_new_json(struct JsonnetVm *vm, char *json, rb_encoding *enc);
 static VALUE fileset_new(struct JsonnetVm *vm, char *buf, rb_encoding *enc);
 
@@ -255,6 +257,128 @@ vm_set_max_trace(VALUE self, VALUE val)
     return Qnil;
 }
 
+static VALUE
+vm_set_fmt_indent(VALUE self, VALUE val)
+{
+    struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
+    jsonnet_fmt_indent(vm->vm, NUM2INT(val));
+    return val;
+}
+
+static VALUE
+vm_set_fmt_max_blank_lines(VALUE self, VALUE val)
+{
+    struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
+    jsonnet_fmt_max_blank_lines(vm->vm, NUM2INT(val));
+    return val;
+}
+
+static VALUE
+vm_set_fmt_string(VALUE self, VALUE str)
+{
+    const char *ptr;
+    struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
+    StringValue(str);
+    if (RSTRING_LEN(str) != 1) {
+	rb_raise(rb_eArgError, "fmt_string must have a length of 1");
+    }
+    ptr = RSTRING_PTR(str);
+    switch (*ptr) {
+	case 'd':
+	case 's':
+	case 'l':
+	    jsonnet_fmt_string(vm->vm, *ptr);
+	    return str;
+	default:
+	    rb_raise(rb_eArgError, "fmt_string only accepts 'd', 's', or 'l'");
+    }
+}
+
+static VALUE
+vm_set_fmt_comment(VALUE self, VALUE str)
+{
+    const char *ptr;
+    struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
+    StringValue(str);
+    if (RSTRING_LEN(str) != 1) {
+	rb_raise(rb_eArgError, "fmt_comment must have a length of 1");
+    }
+    ptr = RSTRING_PTR(str);
+    switch (*ptr) {
+	case 'h':
+	case 's':
+	case 'l':
+	    jsonnet_fmt_comment(vm->vm, *ptr);
+	    return str;
+	default:
+	    rb_raise(rb_eArgError, "fmt_comment only accepts 'h', 's', or 'l'");
+    }
+}
+
+static VALUE
+vm_set_fmt_pad_arrays(VALUE self, VALUE val)
+{
+    struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
+    jsonnet_fmt_pad_objects(vm->vm, RTEST(val) ? 1 : 0);
+    return val;
+}
+
+static VALUE
+vm_set_fmt_pad_objects(VALUE self, VALUE val)
+{
+    struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
+    jsonnet_fmt_pad_objects(vm->vm, RTEST(val) ? 1 : 0);
+    return val;
+}
+
+static VALUE
+vm_set_fmt_pretty_field_names(VALUE self, VALUE val)
+{
+    struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
+    jsonnet_fmt_pretty_field_names(vm->vm, RTEST(val) ? 1 : 0);
+    return val;
+}
+
+static VALUE
+vm_set_fmt_sort_imports(VALUE self, VALUE val)
+{
+    struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
+    jsonnet_fmt_sort_imports(vm->vm, RTEST(val) ? 1 : 0);
+    return val;
+}
+
+static VALUE
+vm_fmt_file(VALUE self, VALUE fname, VALUE encoding)
+{
+    int error;
+    char *result;
+    rb_encoding *const enc = rb_to_encoding(encoding);
+    struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
+
+    FilePathValue(fname);
+    result = jsonnet_fmt_file(vm->vm, StringValueCStr(fname), &error);
+    if (error) {
+	raise_format_error(vm->vm, result, rb_enc_get(fname));
+    }
+    return str_new_json(vm->vm, result, enc);
+}
+
+static VALUE
+vm_fmt_snippet(VALUE self, VALUE snippet, VALUE fname)
+{
+    int error;
+    char *result;
+    struct jsonnet_vm_wrap *vm = rubyjsonnet_obj_to_vm(self);
+
+    rb_encoding *enc = rubyjsonnet_assert_asciicompat(StringValue(snippet));
+    FilePathValue(fname);
+    result = jsonnet_fmt_snippet(vm->vm, StringValueCStr(fname), StringValueCStr(snippet), &error);
+    if (error) {
+	raise_format_error(vm->vm, result, rb_enc_get(fname));
+    }
+    return str_new_json(vm->vm, result, enc);
+}
+
 void
 rubyjsonnet_init_vm(VALUE mJsonnet)
 {
@@ -262,6 +386,8 @@ rubyjsonnet_init_vm(VALUE mJsonnet)
     rb_define_singleton_method(cVM, "new", vm_s_new, -1);
     rb_define_private_method(cVM, "eval_file", vm_evaluate_file, 3);
     rb_define_private_method(cVM, "eval_snippet", vm_evaluate, 3);
+    rb_define_private_method(cVM, "fmt_file", vm_fmt_file, 2);
+    rb_define_private_method(cVM, "fmt_snippet", vm_fmt_snippet, 2);
     rb_define_method(cVM, "ext_var", vm_ext_var, 2);
     rb_define_method(cVM, "ext_code", vm_ext_code, 2);
     rb_define_method(cVM, "tla_var", vm_tla_var, 2);
@@ -272,10 +398,45 @@ rubyjsonnet_init_vm(VALUE mJsonnet)
     rb_define_method(cVM, "gc_growth_trigger=", vm_set_gc_growth_trigger, 1);
     rb_define_method(cVM, "string_output=", vm_set_string_output, 1);
     rb_define_method(cVM, "max_trace=", vm_set_max_trace, 1);
+    rb_define_method(cVM, "fmt_indent=", vm_set_fmt_indent, 1);
+    rb_define_method(cVM, "fmt_max_blank_lines=", vm_set_fmt_max_blank_lines, 1);
+    rb_define_method(cVM, "fmt_string=", vm_set_fmt_string, 1);
+    rb_define_method(cVM, "fmt_comment=", vm_set_fmt_comment, 1);
+    rb_define_method(cVM, "fmt_pad_arrays=", vm_set_fmt_pad_arrays, 1);
+    rb_define_method(cVM, "fmt_pad_objects=", vm_set_fmt_pad_objects, 1);
+    rb_define_method(cVM, "fmt_pretty_field_names=", vm_set_fmt_pretty_field_names, 1);
+    rb_define_method(cVM, "fmt_sort_imports=", vm_set_fmt_sort_imports, 1);
+
+    rb_define_const(mJsonnet, "STRING_STYLE_DOUBLE", rb_str_new_cstr("d"));
+    rb_define_const(mJsonnet, "STRING_STYLE_SINGLE", rb_str_new_cstr("s"));
+    rb_define_const(mJsonnet, "STRING_STYLE_LEAVE", rb_str_new_cstr("l"));
+    rb_define_const(mJsonnet, "COMMENT_STYLE_HASH", rb_str_new_cstr("h"));
+    rb_define_const(mJsonnet, "COMMENT_STYLE_SLASH", rb_str_new_cstr("s"));
+    rb_define_const(mJsonnet, "COMMENT_STYLE_LEAVE", rb_str_new_cstr("l"));
 
     rubyjsonnet_init_callbacks(cVM);
 
     eEvaluationError = rb_define_class_under(mJsonnet, "EvaluationError", rb_eRuntimeError);
+    eFormatError = rb_define_class_under(mJsonnet, "FormatError", rb_eRuntimeError);
+}
+
+static void
+raise_error(VALUE exception_class, struct JsonnetVm *vm, char *msg, rb_encoding *enc)
+{
+    VALUE ex;
+    const int state = rubyjsonnet_jump_tag(msg);
+    if (state) {
+	/*
+	 * This is not actually an exception but another type of long jump
+	 * with the state, temporarily caught by rescue_callback().
+	 */
+	jsonnet_realloc(vm, msg, 0);
+	rb_jump_tag(state);
+    }
+
+    ex = rb_exc_new3(exception_class, rb_enc_str_new_cstr(msg, enc));
+    jsonnet_realloc(vm, msg, 0);
+    rb_exc_raise(ex);
 }
 
 /**
@@ -289,20 +450,13 @@ rubyjsonnet_init_vm(VALUE mJsonnet)
 static void
 raise_eval_error(struct JsonnetVm *vm, char *msg, rb_encoding *enc)
 {
-    VALUE ex;
-    const int state = rubyjsonnet_jump_tag(msg);
-    if (state) {
-	/*
-	 * This is not actually an exception but another type of long jump
-	 * with the state, temporarily caught by rescue_callback().
-	 */
-	jsonnet_realloc(vm, msg, 0);
-	rb_jump_tag(state);
-    }
+    raise_error(eEvaluationError, vm, msg, enc);
+}
 
-    ex = rb_exc_new3(eEvaluationError, rb_enc_str_new_cstr(msg, enc));
-    jsonnet_realloc(vm, msg, 0);
-    rb_exc_raise(ex);
+static void
+raise_format_error(struct JsonnetVm *vm, char *msg, rb_encoding *enc)
+{
+    raise_error(eFormatError, vm, msg, enc);
 }
 
 /**
