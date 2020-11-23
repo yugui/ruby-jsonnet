@@ -13,8 +13,8 @@ unless using_system_libraries?
   require 'mini_portile2'
   message "Using mini_portile version #{MiniPortile::VERSION}\n"
 
-  recipe = MiniPortile.new('jsonnet', 'v0.16.0')
-  recipe.files = ['https://github.com/google/jsonnet/archive/v0.16.0.tar.gz']
+  recipe = MiniPortile.new('jsonnet', 'v0.17.0')
+  recipe.files = ['https://github.com/google/jsonnet/archive/v0.17.0.tar.gz']
   class << recipe
 
     def compile
