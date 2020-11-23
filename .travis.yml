@@ -1,23 +1,19 @@
 language: ruby
-dist: trusty
+dist: xenial
 script: bundle exec rake test
 
 matrix:
   include:
   - os: linux
-    rvm: 2.4.4
+    rvm: 2.5.8
   - os: osx
-    rvm: 2.4.4
-  - os: linux
-    rvm: 2.5.1
-  - os: osx
-    rvm: 2.5.1
+    rvm: 2.5.8
   - os: linux
     rvm: 2.6.6
   - os: osx
     rvm: 2.6.6
   - os: linux
-    rvm: 2.7.1
+    rvm: 2.7.2
   - os: osx
-    rvm: 2.7.1
+    rvm: 2.7.2
   fast_finish: true
