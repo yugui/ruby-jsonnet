@@ -24,7 +24,7 @@ Or install it yourself as:
 $ gem install jsonnet
 ```
 
-By default this gem will compile and install Jsonnet (v0.16.0) as part of
+By default this gem will compile and install Jsonnet (v0.18.0) as part of
 installation. However you can use the system version of Jsonnet if you prefer.
 This would be the recommended route if you want to use a different version
 of Jsonnet or are having problems installing this.
