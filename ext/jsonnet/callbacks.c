@@ -27,7 +27,7 @@ invoke_callback(VALUE args)
 {
     long len = RARRAY_LEN(args);
     VALUE callback = rb_ary_entry(args, 0);
-    return rb_funcall2(callback, id_call, len - 1, RARRAY_PTR(args) + 1);
+    return rb_funcall2(callback, id_call, (int)(len - 1), RARRAY_PTR(args) + 1);
 }
 
 /*
