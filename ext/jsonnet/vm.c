@@ -7,6 +7,10 @@
 
 #include "ruby_jsonnet.h"
 
+#ifndef NORETURN
+# define NORETURN(x) x
+#endif
+
 /*
  * defines the core part of Jsonnet::VM
  */
@@ -385,7 +389,7 @@ vm_fmt_snippet(VALUE self, VALUE snippet, VALUE fname)
 void
 rubyjsonnet_init_vm(VALUE mJsonnet)
 {
-    cVM = rb_define_class_under(mJsonnet, "VM", rb_cData);
+    cVM = rb_define_class_under(mJsonnet, "VM", rb_cObject);
     rb_define_singleton_method(cVM, "new", vm_s_new, -1);
     rb_define_private_method(cVM, "eval_file", vm_evaluate_file, 3);
     rb_define_private_method(cVM, "eval_snippet", vm_evaluate, 3);
@@ -424,7 +428,7 @@ rubyjsonnet_init_vm(VALUE mJsonnet)
 }
 
 static void
-raise_error(VALUE exception_class, struct JsonnetVm *vm, char *msg, rb_encoding *enc)
+NORETURN(raise_error)(VALUE exception_class, struct JsonnetVm *vm, char *msg, rb_encoding *enc)
 {
     VALUE ex;
     const int state = rubyjsonnet_jump_tag(msg);
@@ -451,13 +455,13 @@ raise_error(VALUE exception_class, struct JsonnetVm *vm, char *msg, rb_encoding 
  * @sa rescue_callback
  */
 static void
-raise_eval_error(struct JsonnetVm *vm, char *msg, rb_encoding *enc)
+NORETURN(raise_eval_error)(struct JsonnetVm *vm, char *msg, rb_encoding *enc)
 {
     raise_error(eEvaluationError, vm, msg, enc);
 }
 
 static void
-raise_format_error(struct JsonnetVm *vm, char *msg, rb_encoding *enc)
+NORETURN(raise_format_error)(struct JsonnetVm *vm, char *msg, rb_encoding *enc)
 {
     raise_error(eFormatError, vm, msg, enc);
 }
