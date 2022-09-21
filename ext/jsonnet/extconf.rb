@@ -7,6 +7,7 @@ end
 
 dir_config('jsonnet')
 
+RbConfig::MAKEFILE_CONFIG['LDSHARED'] = '$(CXX) -shared'
 unless using_system_libraries?
   message "Building jsonnet using packaged libraries.\n"
   require 'rubygems'
