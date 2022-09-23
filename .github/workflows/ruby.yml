@@ -1,0 +1,45 @@
+name: Run Unit Tests
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    strategy:
+      matrix:
+        ruby-version: ['2.7', '3.0', '3.1']
+        os: ['ubuntu-latest', 'macos-latest']
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.ruby-version }}
+        bundler-cache: true # runs 'bundle install' and caches installed gems automatically
+    - name: Run tests
+      run: bundle exec rake test
+
+  test-with-system-lib:
+    name: Test with system library
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 3.1
+        bundler-cache: true # runs 'bundle install' and caches installed gems automatically
+    - name: Prepare libjsonnet
+      run: sudo apt install libjsonnet-dev
+    - name: Run tests
+      run: env JSONNET_USE_SYSTEM_LIBRARIES=1 bundle exec rake test
