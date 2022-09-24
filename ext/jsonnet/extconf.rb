@@ -77,12 +77,13 @@ unless using_system_libraries?
   $LIBPATH = ["#{recipe.path}/lib"] | $LIBPATH
   $CPPFLAGS << " -I#{recipe.path}/include"
 
-  # jsonnet_wrap extension must be linked with c++ stdlib because
-  # the C++ library Rapid YAML is being statically linked.
-  rbconfig = RbConfig::MAKEFILE_CONFIG
-  if rbconfig['LDSHAREDXX']
-    rbconfig['LDSHARED'] = rbconfig['LDSHAREDXX']
-  end
+end
+
+# jsonnet_wrap extension must be linked with c++ stdlib because
+# the C++ library Rapid YAML is being statically linked.
+rbconfig = RbConfig::MAKEFILE_CONFIG
+if rbconfig['LDSHAREDXX']
+  rbconfig['LDSHARED'] = rbconfig['LDSHAREDXX']
 end
 
 abort 'libjsonnet.h not found' unless have_header('libjsonnet.h')
