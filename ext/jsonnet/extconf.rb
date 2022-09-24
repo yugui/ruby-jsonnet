@@ -7,7 +7,6 @@ end
 
 dir_config('jsonnet')
 
-RbConfig::MAKEFILE_CONFIG['LDSHARED'] = '$(CXX) -shared'
 unless using_system_libraries?
   message "Building jsonnet using packaged libraries.\n"
   require 'rubygems'
@@ -77,6 +76,13 @@ unless using_system_libraries?
   # but the makefile to fail. These commands add the necessary paths to do both
   $LIBPATH = ["#{recipe.path}/lib"] | $LIBPATH
   $CPPFLAGS << " -I#{recipe.path}/include"
+
+  # jsonnet_wrap extension must be linked with c++ stdlib because
+  # the C++ library Rapid YAML is being statically linked.
+  rbconfig = RbConfig::MAKEFILE_CONFIG
+  if rbconfig['LDSHAREDXX']
+    rbconfig['LDSHARED'] = rbconfig['LDSHAREDXX']
+  end
 end
 
 abort 'libjsonnet.h not found' unless have_header('libjsonnet.h')
