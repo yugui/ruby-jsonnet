@@ -80,11 +80,10 @@ vm_free(void *ptr)
 
     for (i = 0; i < vm->native_callbacks.len; ++i) {
 	struct native_callback_ctx *ctx = vm->native_callbacks.contexts[i];
-	RB_REALLOC_N(ctx, struct native_callback_ctx, 0);
+	xfree(ctx);
     }
-    RB_REALLOC_N(vm->native_callbacks.contexts, struct native_callback_ctx *, 0);
-
-    RB_REALLOC_N(vm, struct jsonnet_vm_wrap, 0);
+    xfree(vm->native_callbacks.contexts);
+    xfree(vm);
 }
 
 static void
