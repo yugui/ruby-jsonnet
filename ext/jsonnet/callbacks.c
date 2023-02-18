@@ -11,6 +11,14 @@
  */
 #define RUBYJSONNET_GLOBAL_ESCAPE_MAGIC "\x07\x03\x0c:rubytag:\x07\x03\x0c:"
 
+/* Copied from vm_core.h in Ruby. State variables in global escapes have
+ * this value when an exception is raised.
+ *
+ * TODO(yugui) Find a better way to distinguish "raise" from "throw".
+ * It is not a very good idea to depend on the implementation details of Ruby.
+ */
+#define RUBY_TAG_RAISE 0x6
+
 /*
  * callback support in VM
  */
@@ -44,9 +52,9 @@ invoke_callback(VALUE args)
 static VALUE
 rescue_callback(int state, const char *fmt, ...)
 {
-    VALUE err = rb_errinfo();
-    if (rb_obj_is_kind_of(err, rb_eException)) {
-	VALUE msg = rb_protect(rubyjsonnet_format_exception, rb_errinfo(), NULL);
+    if (state == RUBY_TAG_RAISE) {
+	VALUE err = rb_errinfo();
+	VALUE msg = rb_protect(rubyjsonnet_format_exception, err, NULL);
 	if (msg == Qnil) {
 	    va_list ap;
 	    va_start(ap, fmt);
