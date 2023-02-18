@@ -54,7 +54,6 @@ class TestVM < Test::Unit::TestCase
     end
   end
 
-
   test 'Jsonnet::VM#evaluate evaluates snippet' do
     vm = Jsonnet::VM.new
     result = vm.evaluate(<<-EOS, filename: 'example.snippet')
