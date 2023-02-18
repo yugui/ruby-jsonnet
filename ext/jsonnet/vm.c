@@ -59,16 +59,15 @@ rubyjsonnet_obj_to_vm(VALUE wrap)
 }
 
 static VALUE
-vm_s_new(int argc, const VALUE *argv, VALUE klass)
+vm_s_allocate(VALUE klass)
 {
     struct jsonnet_vm_wrap *vm;
-    VALUE self = TypedData_Make_Struct(cVM, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
+    VALUE self = TypedData_Make_Struct(klass, struct jsonnet_vm_wrap, &jsonnet_vm_type, vm);
     vm->vm = jsonnet_make();
     vm->import_callback = Qnil;
     vm->native_callbacks.len = 0;
     vm->native_callbacks.contexts = NULL;
 
-    rb_obj_call_init(self, argc, argv);
     return self;
 }
 
@@ -390,7 +389,7 @@ void
 rubyjsonnet_init_vm(VALUE mJsonnet)
 {
     cVM = rb_define_class_under(mJsonnet, "VM", rb_cObject);
-    rb_define_singleton_method(cVM, "new", vm_s_new, -1);
+    rb_define_alloc_func(cVM, vm_s_allocate);
     rb_define_private_method(cVM, "eval_file", vm_evaluate_file, 3);
     rb_define_private_method(cVM, "eval_snippet", vm_evaluate, 3);
     rb_define_private_method(cVM, "fmt_file", vm_fmt_file, 2);
