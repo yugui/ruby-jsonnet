@@ -63,7 +63,7 @@ gem install jsonnet -- --use-system-libraries
 
 Load the library with `require "jsonnet"`
 
-You can evaluate a string of Jsonnet using `Jsonnet.parse`
+You can evaluate a string of Jsonnet using `Jsonnet.evaluate`
 
 ```
 irb(main):002:0> Jsonnet.evaluate('{ foo: "bar" }')
