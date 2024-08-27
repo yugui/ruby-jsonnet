@@ -104,9 +104,15 @@ rubyjsonnet_jump_tag(const char *exc_mesg)
     return 0;
 }
 
+#ifdef HAVE_JSONNET_IMPORT_CALLBACK_0_19
+static int
+import_callback_entrypoint(void *ctx, const char *base, const char *rel, char **found_here,
+			   char **buf, size_t *buflen)
+#else
 static char *
 import_callback_entrypoint(void *ctx, const char *base, const char *rel, char **found_here,
 			   int *success)
+#endif
 {
     struct jsonnet_vm_wrap *const vm = (struct jsonnet_vm_wrap *)ctx;
     int state;
@@ -123,14 +129,26 @@ import_callback_entrypoint(void *ctx, const char *base, const char *rel, char **
 
     if (state) {
 	VALUE msg = rescue_callback(state, "cannot import %s from %s", rel, base);
+#ifdef HAVE_JSONNET_IMPORT_CALLBACK_0_19
+	*buf = rubyjsonnet_str_to_cstr(vm->vm, msg);
+	*buflen = RSTRING_LEN(msg);
+	return 1;
+#else
 	*success = 0;
 	return rubyjsonnet_str_to_cstr(vm->vm, msg);
+#endif
     }
 
     result = rb_Array(result);
-    *success = 1;
     *found_here = rubyjsonnet_str_to_cstr(vm->vm, rb_ary_entry(result, 1));
+#ifdef HAVE_JSONNET_IMPORT_CALLBACK_0_19
+    *buf = rubyjsonnet_str_to_cstr(vm->vm, rb_ary_entry(result, 0));
+    *buflen = RSTRING_LEN(rb_ary_entry(result, 0));
+    return 0;
+#else
+    *success = 1;
     return rubyjsonnet_str_to_cstr(vm->vm, rb_ary_entry(result, 0));
+#endif
 }
 
 /*

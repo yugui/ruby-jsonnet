@@ -13,8 +13,8 @@ unless using_system_libraries?
   require 'mini_portile2'
   message "Using mini_portile version #{MiniPortile::VERSION}\n"
 
-  recipe = MiniPortile.new('jsonnet', 'v0.18.0')
-  recipe.files = ['https://github.com/google/jsonnet/archive/v0.18.0.tar.gz']
+  recipe = MiniPortile.new('jsonnet', 'v0.20.0')
+  recipe.files = ['https://github.com/google/jsonnet/archive/v0.20.0.tar.gz']
   class << recipe
     CORE_OBJS = %w[
       desugarer.o formatter.o lexer.o libjsonnet.o parser.o pass.o static_analysis.o string_utils.o vm.o
@@ -89,4 +89,21 @@ end
 abort 'libjsonnet.h not found' unless have_header('libjsonnet.h')
 abort 'libjsonnet not found' unless have_library('jsonnet')
 have_header('libjsonnet_fmt.h')
+
+import_callback_0_19 = checking_for checking_message('JsonnetImportCallback >= v0.19.0') do
+  try_compile(<<SRC, '-Werror=incompatible-pointer-types')
+#include <libjsonnet.h>
+
+int f(void *ctx, const char *base, const char *rel, char **found_here, char **buf, size_t *buflen);
+
+int main() {
+  jsonnet_import_callback(NULL, f, NULL);
+  return 0;
+}
+SRC
+end
+if import_callback_0_19
+  $defs.push('-DHAVE_JSONNET_IMPORT_CALLBACK_0_19')
+end
+
 create_makefile('jsonnet/jsonnet_wrap')
