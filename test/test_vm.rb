@@ -287,6 +287,26 @@ class TestVM < Test::Unit::TestCase
     assert_equal expected, JSON.parse(result)
   end
 
+  test "Jsonnet::VM#import_callback allows NUL char in Jsonnet v0.19 or later" do
+    return unless Jsonnet.libversion >= "v0.19"
+
+    example_str = "\x0\x1".force_encoding(Encoding::BINARY)
+
+    vm = Jsonnet::VM.new
+    vm.import_callback = ->(base, rel) {
+      case [base, rel]
+      when ['/path/to/base/', 'foo.bin']
+        return "\x0\x1".force_encoding(Encoding::BINARY), '/path/to/base/foo.bin'
+      else
+        raise Errno::ENOENT, "#{rel} at #{base}"
+      end
+    }
+    result = vm.evaluate(<<-EOS, filename: "/path/to/base/example.jsonnet")
+      importbin "foo.bin"
+    EOS
+    assert_equal [0, 1], JSON.parse(result)
+  end
+
   test "Jsonnet::VM#evaluate returns an error if customized import callback raises an exception" do
     vm = Jsonnet::VM.new
     called = false

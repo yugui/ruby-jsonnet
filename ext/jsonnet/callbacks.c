@@ -130,8 +130,7 @@ import_callback_entrypoint(void *ctx, const char *base, const char *rel, char **
     if (state) {
 	VALUE msg = rescue_callback(state, "cannot import %s from %s", rel, base);
 #ifdef HAVE_JSONNET_IMPORT_CALLBACK_0_19
-	*buf = rubyjsonnet_str_to_cstr(vm->vm, msg);
-	*buflen = RSTRING_LEN(msg);
+	*buf = rubyjsonnet_str_to_ptr(vm->vm, msg, buflen);
 	return 1;
 #else
 	*success = 0;
@@ -142,8 +141,7 @@ import_callback_entrypoint(void *ctx, const char *base, const char *rel, char **
     result = rb_Array(result);
     *found_here = rubyjsonnet_str_to_cstr(vm->vm, rb_ary_entry(result, 1));
 #ifdef HAVE_JSONNET_IMPORT_CALLBACK_0_19
-    *buf = rubyjsonnet_str_to_cstr(vm->vm, rb_ary_entry(result, 0));
-    *buflen = RSTRING_LEN(rb_ary_entry(result, 0));
+    *buf = rubyjsonnet_str_to_ptr(vm->vm, rb_ary_entry(result, 0), buflen);
     return 0;
 #else
     *success = 1;
