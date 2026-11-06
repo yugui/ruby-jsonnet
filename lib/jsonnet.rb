@@ -22,7 +22,7 @@ module Jsonnet
   #       so those should be looked at for furhter details
   def evaluate(jsonnet, jsonnet_options: {}, json_options: {})
     output = VM.evaluate(jsonnet, jsonnet_options)
-    JSON.parse(output, json_options)
+    JSON.parse(output, **json_options)
   end
 
   ##
@@ -42,6 +42,6 @@ module Jsonnet
   #       so those should be looked at for furhter details
   def load(path, jsonnet_options: {}, json_options: {})
     output = VM.evaluate_file(path, jsonnet_options)
-    JSON.parse(output, json_options)
+    JSON.parse(output, **json_options)
   end
 end
